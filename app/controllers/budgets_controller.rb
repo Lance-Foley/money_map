@@ -10,9 +10,16 @@ class BudgetsController < ApplicationController
     @items_by_category = @period.budget_items.includes(:budget_category).group_by(&:budget_category_id)
     @incomes = @period.incomes
 
+    period_start = Date.new(year, month, 1)
+    period_end = period_start.end_of_month
+    @new_transactions = Transaction.uncategorized.by_date_range(period_start, period_end).chronological.includes(:account)
+    @tracked_transactions = Transaction.where.not(budget_item_id: nil).by_date_range(period_start, period_end).chronological.includes(:account, :budget_item)
+
     render Views::Budgets::ShowView.new(
       period: @period, categories: @categories,
-      items_by_category: @items_by_category, incomes: @incomes
+      items_by_category: @items_by_category, incomes: @incomes,
+      new_transactions: @new_transactions,
+      tracked_transactions: @tracked_transactions
     )
   end
 
