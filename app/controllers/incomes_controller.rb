@@ -33,6 +33,6 @@ class IncomesController < ApplicationController
   private
 
   def income_params
-    params.require(:income).permit(:budget_period_id, :source_name, :expected_amount, :received_amount, :pay_date, :recurring, :frequency)
+    params.require(:income).permit(:budget_period_id, :source_name, :expected_amount, :received_amount, :pay_date, :recurring, :frequency, :start_date, :custom_interval_value, :custom_interval_unit)
   end
 end

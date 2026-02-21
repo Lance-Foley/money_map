@@ -47,10 +47,51 @@ class Views::RecurringBills::FormView < Views::Base
               f.number_field :amount, step: 0.01, class: input_class, placeholder: "0.00"
             end
 
-            # Frequency
+            # Frequency section with Stimulus controller for custom toggle
+            div(data: { controller: "frequency-toggle" }) do
+              # Frequency
+              div(class: "space-y-2") do
+                label(for: "recurring_bill_frequency", class: "text-sm font-medium leading-none") { "Frequency" }
+                f.select :frequency, frequency_options, { prompt: "Select frequency..." }, class: input_class, data: { frequency_select: true, action: "change->frequency-toggle#toggle" }
+              end
+
+              # Custom interval fields (shown only when Custom is selected)
+              div(class: "space-y-4 mt-4 #{@bill.custom? ? '' : 'hidden'}", data: { frequency_toggle_target: "customFields" }) do
+                div(class: "rounded-lg border border-border bg-muted/50 p-4 space-y-4") do
+                  p(class: "text-sm font-medium text-muted-foreground") { "Custom Interval" }
+
+                  div(class: "grid grid-cols-2 gap-4") do
+                    # Interval value
+                    div(class: "space-y-2") do
+                      label(for: "recurring_bill_custom_interval_value", class: "text-sm font-medium leading-none") { "Every" }
+                      f.number_field :custom_interval_value, min: 1, class: input_class, placeholder: "1"
+                    end
+
+                    # Interval unit
+                    div(class: "space-y-2") do
+                      label(for: "recurring_bill_custom_interval_unit", class: "text-sm font-medium leading-none") { "Unit" }
+                      f.select :custom_interval_unit, interval_unit_options, { prompt: "Select unit..." }, class: input_class
+                    end
+                  end
+                end
+              end
+            end
+
+            # Start date
             div(class: "space-y-2") do
-              label(for: "recurring_bill_frequency", class: "text-sm font-medium leading-none") { "Frequency" }
-              f.select :frequency, RecurringBill.frequencies.keys.map { |freq| [freq.titleize, freq] }, { prompt: "Select frequency..." }, class: input_class
+              label(for: "recurring_bill_start_date", class: "text-sm font-medium leading-none") { "Start Date" }
+              f.date_field :start_date, class: input_class
+              p(class: "text-xs text-muted-foreground") { "The date the first occurrence falls on. Used to calculate future due dates." }
+            end
+
+            # Schedule description (for existing bills)
+            if @bill.persisted? && @bill.start_date.present?
+              div(class: "rounded-lg border border-border bg-muted/50 p-3") do
+                p(class: "text-sm") do
+                  span(class: "font-medium") { "Schedule: " }
+                  plain @bill.schedule_description
+                end
+              end
             end
 
             # Due day
@@ -98,5 +139,27 @@ class Views::RecurringBills::FormView < Views::Base
 
   def input_class
     "flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+  end
+
+  def frequency_options
+    [
+      ["Weekly", "weekly"],
+      ["Biweekly", "biweekly"],
+      ["Semi-monthly", "semimonthly"],
+      ["Monthly", "monthly"],
+      ["Quarterly", "quarterly"],
+      ["Semi-annual", "semi_annual"],
+      ["Annual", "annual"],
+      ["Custom", "custom"]
+    ]
+  end
+
+  def interval_unit_options
+    [
+      ["Days", 0],
+      ["Weeks", 1],
+      ["Months", 2],
+      ["Years", 3]
+    ]
   end
 end

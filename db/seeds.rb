@@ -106,18 +106,19 @@ months = [
   [today.year, today.month]
 ]
 
+# Each item has [name, planned_amount, expected_day_of_month]
 budget_items_template = [
-  { category: "Giving", items: [["Tithing", 500], ["Charity", 100]] },
-  { category: "Savings", items: [["Emergency Fund", 500], ["Vacation Fund", 200]] },
-  { category: "Housing", items: [["Mortgage", 1150], ["Home Insurance", 125], ["Home Repairs", 100]] },
-  { category: "Utilities", items: [["Electric", 150], ["Water", 60], ["Internet", 80], ["Phone", 85]] },
-  { category: "Food", items: [["Groceries", 600], ["Restaurants", 150]] },
-  { category: "Transportation", items: [["Gas", 200], ["Car Insurance", 120], ["Car Maintenance", 50]] },
-  { category: "Insurance", items: [["Health Insurance", 350], ["Life Insurance", 45]] },
-  { category: "Health", items: [["Doctor/Dental", 50], ["Gym", 40]] },
-  { category: "Debt", items: [["Credit Card Payment", 200], ["Car Payment", 325], ["Student Loan Payment", 250]] },
-  { category: "Personal", items: [["Clothing", 100], ["Haircut", 30]] },
-  { category: "Lifestyle", items: [["Subscriptions", 50], ["Entertainment", 100], ["Hobbies", 75]] }
+  { category: "Giving", items: [["Tithing", 500, 1], ["Charity", 100, 1]] },
+  { category: "Savings", items: [["Emergency Fund", 500, 1], ["Vacation Fund", 200, 1]] },
+  { category: "Housing", items: [["Mortgage", 1150, 1], ["Home Insurance", 125, 1], ["Home Repairs", 100, 15]] },
+  { category: "Utilities", items: [["Electric", 150, 15], ["Water", 60, 20], ["Internet", 80, 10], ["Phone", 85, 12]] },
+  { category: "Food", items: [["Groceries", 600, 7], ["Restaurants", 150, 15]] },
+  { category: "Transportation", items: [["Gas", 200, 7], ["Car Insurance", 120, 5], ["Car Maintenance", 50, 15]] },
+  { category: "Insurance", items: [["Health Insurance", 350, 1], ["Life Insurance", 45, 15]] },
+  { category: "Health", items: [["Doctor/Dental", 50, 15], ["Gym", 40, 1]] },
+  { category: "Debt", items: [["Credit Card Payment", 200, 15], ["Car Payment", 325, 15], ["Student Loan Payment", 250, 15]] },
+  { category: "Personal", items: [["Clothing", 100, 10], ["Haircut", 30, 20]] },
+  { category: "Lifestyle", items: [["Subscriptions", 50, 8], ["Entertainment", 100, 15], ["Hobbies", 75, 20]] }
 ]
 
 months.each_with_index do |(year, month), idx|
@@ -125,21 +126,34 @@ months.each_with_index do |(year, month), idx|
     p.status = idx < months.length - 1 ? :closed : :active
   end
 
-  # Add income
-  Income.find_or_create_by!(budget_period: period, source_name: "Primary Job") do |i|
-    i.expected_amount = 6500
-    i.received_amount = 6500
-    i.pay_date = Date.new(year, month, 15)
+  # Add income - biweekly primary job (two paychecks per month)
+  Income.find_or_create_by!(budget_period: period, source_name: "Primary Job", pay_date: Date.new(year, month, 14)) do |i|
+    i.expected_amount = 3250
+    i.received_amount = 3250
     i.recurring = true
-    i.frequency = :monthly
+    i.frequency = :biweekly
+    i.start_date = Date.new(2026, 1, 2)
+    i.auto_generated = false
+  end
+
+  last_day = Date.new(year, month, -1).day
+  Income.find_or_create_by!(budget_period: period, source_name: "Primary Job", pay_date: Date.new(year, month, [28, last_day].min)) do |i|
+    i.expected_amount = 3250
+    i.received_amount = 3250
+    i.recurring = true
+    i.frequency = :biweekly
+    i.start_date = Date.new(2026, 1, 16)
+    i.auto_generated = false
   end
 
   Income.find_or_create_by!(budget_period: period, source_name: "Side Hustle") do |i|
     i.expected_amount = 800
     i.received_amount = [700, 800, 900, 850][idx]
-    i.pay_date = Date.new(year, month, [28, Date.new(year, month, -1).day].min)
+    i.pay_date = Date.new(year, month, [28, last_day].min)
     i.recurring = true
     i.frequency = :monthly
+    i.start_date = Date.new(2026, 1, 28)
+    i.auto_generated = false
   end
 
   # Add budget items with realistic variation
@@ -147,13 +161,16 @@ months.each_with_index do |(year, month), idx|
     cat = categories[group[:category]]
     next unless cat
 
-    group[:items].each do |name, planned|
+    group[:items].each do |name, planned, expected_day|
       spent = (planned * (0.85 + rand * 0.3)).round(2)
       spent = [spent, 0].max
+      days_in_month = Date.new(year, month, -1).day
+      safe_day = [expected_day || 1, days_in_month].min
 
       BudgetItem.find_or_create_by!(budget_period: period, budget_category: cat, name: name) do |item|
         item.planned_amount = planned
         item.spent_amount = idx < months.length - 1 ? spent : (spent * 0.6).round(2) # Current month partially spent
+        item.expected_date = Date.new(year, month, safe_day)
         item.rollover = name.include?("Fund")
         item.fund_goal = name.include?("Fund") ? planned * 12 : nil
         item.fund_balance = name.include?("Fund") ? planned * idx : nil
@@ -223,17 +240,25 @@ puts "  #{Transaction.count} transactions"
 # 6. Recurring Bills
 # ============================================
 bills = [
-  { name: "Mortgage", amount: 1150, due_day: 1, frequency: :monthly, category: "Housing" },
-  { name: "Car Insurance", amount: 120, due_day: 5, frequency: :monthly, category: "Transportation" },
-  { name: "Electric", amount: 150, due_day: 15, frequency: :monthly, category: "Utilities" },
-  { name: "Water", amount: 60, due_day: 20, frequency: :monthly, category: "Utilities" },
-  { name: "Internet", amount: 80, due_day: 10, frequency: :monthly, category: "Utilities" },
-  { name: "Phone", amount: 85, due_day: 12, frequency: :monthly, category: "Utilities" },
-  { name: "Netflix", amount: 15, due_day: 8, frequency: :monthly, category: "Lifestyle" },
-  { name: "Spotify", amount: 11, due_day: 8, frequency: :monthly, category: "Lifestyle" },
-  { name: "Gym", amount: 40, due_day: 1, frequency: :monthly, category: "Health" },
-  { name: "Health Insurance", amount: 350, due_day: 1, frequency: :monthly, category: "Insurance" },
-  { name: "Life Insurance", amount: 45, due_day: 15, frequency: :monthly, category: "Insurance" }
+  # Monthly bills with start_date based on due_day
+  { name: "Mortgage", amount: 1150, due_day: 1, frequency: :monthly, start_date: Date.new(2026, 1, 1), category: "Housing" },
+  { name: "Car Insurance", amount: 120, due_day: 5, frequency: :monthly, start_date: Date.new(2026, 1, 5), category: "Transportation" },
+  { name: "Electric", amount: 150, due_day: 15, frequency: :monthly, start_date: Date.new(2026, 1, 15), category: "Utilities" },
+  { name: "Water", amount: 60, due_day: 20, frequency: :monthly, start_date: Date.new(2026, 1, 20), category: "Utilities" },
+  { name: "Internet", amount: 80, due_day: 10, frequency: :monthly, start_date: Date.new(2026, 1, 10), category: "Utilities" },
+  { name: "Phone", amount: 85, due_day: 12, frequency: :monthly, start_date: Date.new(2026, 1, 12), category: "Utilities" },
+  { name: "Netflix", amount: 15, due_day: 8, frequency: :monthly, start_date: Date.new(2026, 1, 8), category: "Lifestyle" },
+  { name: "Spotify", amount: 11, due_day: 8, frequency: :monthly, start_date: Date.new(2026, 1, 8), category: "Lifestyle" },
+  { name: "Gym", amount: 40, due_day: 1, frequency: :monthly, start_date: Date.new(2026, 1, 1), category: "Health" },
+  { name: "Health Insurance", amount: 350, due_day: 1, frequency: :monthly, start_date: Date.new(2026, 1, 1), category: "Insurance" },
+  { name: "Life Insurance", amount: 45, due_day: 15, frequency: :monthly, start_date: Date.new(2026, 1, 15), category: "Insurance" },
+  # Weekly bill
+  { name: "House Cleaning", amount: 75, due_day: 6, frequency: :weekly, start_date: Date.new(2026, 1, 6), category: "Housing" },
+  # Biweekly bill
+  { name: "Lawn Service", amount: 50, due_day: 3, frequency: :biweekly, start_date: Date.new(2026, 1, 3), category: "Housing" },
+  # Custom frequency: pest control every 3 months
+  { name: "Pest Control", amount: 120, due_day: 15, frequency: :custom, start_date: Date.new(2026, 1, 15),
+    custom_interval_value: 3, custom_interval_unit: 2, category: "Housing" }
 ]
 
 bills.each do |bill_data|
@@ -242,10 +267,13 @@ bills.each do |bill_data|
     b.amount = bill_data[:amount]
     b.due_day = bill_data[:due_day]
     b.frequency = bill_data[:frequency]
+    b.start_date = bill_data[:start_date]
     b.budget_category = cat
     b.account = checking
     b.active = true
     b.reminder_days_before = 3
+    b.custom_interval_value = bill_data[:custom_interval_value] if bill_data[:custom_interval_value]
+    b.custom_interval_unit = bill_data[:custom_interval_unit] if bill_data[:custom_interval_unit]
   end
 end
 

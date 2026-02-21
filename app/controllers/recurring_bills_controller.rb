@@ -65,6 +65,6 @@ class RecurringBillsController < ApplicationController
   end
 
   def bill_params
-    params.require(:recurring_bill).permit(:name, :amount, :account_id, :budget_category_id, :due_day, :frequency, :auto_create_transaction, :reminder_days_before, :active)
+    params.require(:recurring_bill).permit(:name, :amount, :account_id, :budget_category_id, :due_day, :frequency, :start_date, :custom_interval_value, :custom_interval_unit, :auto_create_transaction, :reminder_days_before, :active)
   end
 end

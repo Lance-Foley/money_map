@@ -73,6 +73,7 @@ class Views::Budgets::ShowView < Views::Base
                   TableHead { "Received" }
                   TableHead { "Frequency" }
                   TableHead { "Pay Date" }
+                  TableHead { "Start Date" }
                 end
               end
               TableBody do
@@ -81,14 +82,28 @@ class Views::Budgets::ShowView < Views::Base
                     TableCell(class: "font-medium") { income.source_name }
                     TableCell { format_currency(income.expected_amount) }
                     TableCell { income.received_amount ? format_currency(income.received_amount) : "-" }
-                    TableCell { income.frequency.titleize }
+                    TableCell do
+                      plain income.frequency.titleize
+                      if income.custom? && income.custom_interval_value.present?
+                        span(class: "text-xs text-muted-foreground ml-1") do
+                          unit = Schedulable::INTERVAL_UNITS[income.custom_interval_unit]
+                          plain "(every #{income.custom_interval_value} #{unit})"
+                        end
+                      end
+                    end
                     TableCell { income.pay_date&.strftime("%b %d") || "-" }
+                    TableCell { income.start_date&.strftime("%b %d") || "-" }
                   end
                 end
               end
             end
           else
             p(class: "text-muted-foreground text-sm") { "No income entries yet." }
+          end
+
+          # Add income form
+          div(class: "mt-4 pt-4 border-t") do
+            income_form
           end
         end
       end
@@ -197,6 +212,63 @@ class Views::Budgets::ShowView < Views::Base
 
   def next_month
     @period.month == 12 ? 1 : @period.month + 1
+  end
+
+  def income_form
+    frequency_options = Income.frequencies.keys.map { |freq| [freq.titleize, freq] }
+    interval_unit_options = Schedulable::INTERVAL_UNITS.map { |k, v| [v.to_s.titleize, k] }
+
+    form_with(model: Income.new, url: helpers.incomes_path, class: "space-y-3", data: { controller: "frequency-toggle", action: "change->frequency-toggle#toggle" }) do |f|
+      f.hidden_field :budget_period_id, value: @period.id
+
+      div(class: "flex flex-wrap gap-2 items-end") do
+        div(class: "flex-1 min-w-[120px]") do
+          label(for: "income_source_name", class: "text-xs font-medium text-muted-foreground") { "Source" }
+          f.text_field :source_name, placeholder: "Income source", class: input_class
+        end
+        div(class: "w-28") do
+          label(for: "income_expected_amount", class: "text-xs font-medium text-muted-foreground") { "Expected" }
+          f.number_field :expected_amount, step: 0.01, placeholder: "Amount", class: input_class
+        end
+        div(class: "w-36") do
+          label(for: "income_frequency", class: "text-xs font-medium text-muted-foreground") { "Frequency" }
+          f.select :frequency, frequency_options, { selected: "monthly" }, class: input_class, data: { frequency_select: true }
+        end
+        div(class: "w-32") do
+          label(for: "income_pay_date", class: "text-xs font-medium text-muted-foreground") { "Pay Date" }
+          f.date_field :pay_date, class: input_class
+        end
+        div(class: "w-32") do
+          label(for: "income_start_date", class: "text-xs font-medium text-muted-foreground") { "Start Date" }
+          f.date_field :start_date, class: input_class
+        end
+      end
+
+      # Custom interval fields (shown only when "Custom" is selected)
+      div(class: "flex flex-wrap gap-2 items-end hidden", data: { frequency_toggle_target: "customFields" }) do
+        div(class: "w-28") do
+          label(for: "income_custom_interval_value", class: "text-xs font-medium text-muted-foreground") { "Every" }
+          f.number_field :custom_interval_value, min: 1, placeholder: "e.g. 6", class: input_class
+        end
+        div(class: "w-28") do
+          label(for: "income_custom_interval_unit", class: "text-xs font-medium text-muted-foreground") { "Unit" }
+          f.select :custom_interval_unit, interval_unit_options, {}, class: input_class
+        end
+      end
+
+      # Recurring checkbox + submit
+      div(class: "flex items-center gap-3") do
+        div(class: "flex items-center gap-1") do
+          f.check_box :recurring, class: "rounded border-input"
+          label(for: "income_recurring", class: "text-sm font-medium leading-none") { "Recurring" }
+        end
+        f.submit "+ Add Income", class: "inline-flex items-center justify-center rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground shadow hover:bg-primary/90 cursor-pointer h-9"
+      end
+    end
+  end
+
+  def input_class
+    "flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
   end
 
   def format_currency(amount)
