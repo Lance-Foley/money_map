@@ -28,13 +28,21 @@ class ActionPlanController < ApplicationController
     @categories = BudgetCategory.ordered
     @accounts = Account.active.order(:name)
 
+    # Sidebar data
+    @active_accounts = Account.active.order(:account_type, :name)
+    @current_period = BudgetPeriod.current.first
+    @next_milestone = SavingsGoal.active.by_priority.first
+
     render Views::ActionPlan::ShowView.new(
       cash_flow: @cash_flow,
       periods: @periods,
       timeline_by_month: timeline_by_month,
       categories: @categories,
       accounts: @accounts,
-      months: @months
+      months: @months,
+      active_accounts: @active_accounts,
+      current_period: @current_period,
+      next_milestone: @next_milestone
     )
   end
 

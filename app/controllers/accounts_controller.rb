@@ -6,7 +6,29 @@ class AccountsController < ApplicationController
   def index
     @current_page = "Accounts"
     @accounts = Account.active.order(:account_type, :name)
-    render Views::Accounts::IndexView.new(accounts: @accounts)
+
+    asset_accounts = @accounts.select(&:asset?)
+    liability_accounts = @accounts.select(&:debt?)
+
+    total_assets = asset_accounts.sum(&:balance)
+    total_liabilities = liability_accounts.sum(&:balance)
+
+    bank_accounts = asset_accounts.select { |a| a.checking? || a.savings? }
+    investments = asset_accounts.select(&:investment?)
+    credit_cards = liability_accounts.select(&:credit_card?)
+    loans = liability_accounts.select(&:loan?)
+    mortgages = liability_accounts.select(&:mortgage?)
+
+    render Views::Accounts::IndexView.new(
+      accounts: @accounts,
+      bank_accounts: bank_accounts,
+      investments: investments,
+      credit_cards: credit_cards,
+      loans: loans,
+      mortgages: mortgages,
+      total_assets: total_assets,
+      total_liabilities: total_liabilities
+    )
   end
 
   def show
