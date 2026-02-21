@@ -16,7 +16,7 @@ class IncomesControllerTest < ActionDispatch::IntegrationTest
           budget_period_id: @period.id,
           source_name: "Side Gig",
           expected_amount: 300.00,
-          frequency: "one_time"
+          frequency: "monthly"
         }
       }
     end

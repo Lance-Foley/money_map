@@ -3,6 +3,7 @@ class RecurringBill < ApplicationRecord
 
   belongs_to :account, optional: true
   belongs_to :budget_category, optional: true
+  has_many :budget_items, dependent: :nullify
 
   enum :frequency, {
     weekly: 0, biweekly: 1, semimonthly: 2, monthly: 3,

@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_02_21_214044) do
+ActiveRecord::Schema[8.0].define(version: 2026_02_21_214520) do
   create_table "accounts", force: :cascade do |t|
     t.string "name", null: false
     t.integer "account_type", null: false
@@ -74,8 +74,13 @@ ActiveRecord::Schema[8.0].define(version: 2026_02_21_214044) do
     t.decimal "fund_balance", precision: 12, scale: 2, default: "0.0"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.date "expected_date"
+    t.integer "recurring_bill_id"
+    t.boolean "auto_generated", default: false
     t.index ["budget_category_id"], name: "index_budget_items_on_budget_category_id"
     t.index ["budget_period_id"], name: "index_budget_items_on_budget_period_id"
+    t.index ["expected_date"], name: "index_budget_items_on_expected_date"
+    t.index ["recurring_bill_id"], name: "index_budget_items_on_recurring_bill_id"
   end
 
   create_table "budget_periods", force: :cascade do |t|
@@ -135,6 +140,11 @@ ActiveRecord::Schema[8.0].define(version: 2026_02_21_214044) do
     t.integer "frequency"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.date "start_date"
+    t.integer "custom_interval_value"
+    t.integer "custom_interval_unit"
+    t.boolean "auto_generated"
+    t.integer "recurring_source_id"
     t.index ["budget_period_id"], name: "index_incomes_on_budget_period_id"
   end
 
@@ -230,6 +240,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_02_21_214044) do
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
   add_foreign_key "budget_items", "budget_categories"
   add_foreign_key "budget_items", "budget_periods"
+  add_foreign_key "budget_items", "recurring_bills"
   add_foreign_key "csv_imports", "accounts"
   add_foreign_key "debt_payments", "accounts"
   add_foreign_key "debt_payments", "budget_periods"

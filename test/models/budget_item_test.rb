@@ -99,4 +99,24 @@ class BudgetItemTest < ActiveSupport::TestCase
       assert_equal food.id, item.budget_category_id
     end
   end
+
+  test "from_recurring? returns true when linked to recurring bill" do
+    assert budget_items(:rent).from_recurring?
+  end
+
+  test "from_recurring? returns false for manual items" do
+    assert_not budget_items(:groceries).from_recurring?
+  end
+
+  test "chronological scope orders by expected_date" do
+    items = BudgetItem.chronological
+    dates = items.map(&:expected_date).compact
+    assert_equal dates.sort, dates
+  end
+
+  test "for_recurring_bill scope finds items from a specific bill" do
+    items = BudgetItem.for_recurring_bill(recurring_bills(:rent_bill))
+    assert items.any?, "Expected at least one item for rent_bill"
+    assert items.all? { |i| i.recurring_bill_id == recurring_bills(:rent_bill).id }
+  end
 end

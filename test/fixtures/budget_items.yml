@@ -4,6 +4,8 @@ rent:
   name: Rent
   planned_amount: 1500.00
   spent_amount: 1500.00
+  expected_date: "2026-02-01"
+  recurring_bill: rent_bill
   rollover: false
 
 groceries:
@@ -12,6 +14,7 @@ groceries:
   name: Groceries
   planned_amount: 600.00
   spent_amount: 450.00
+  expected_date: "2026-02-07"
   rollover: false
 
 electric:
@@ -20,6 +23,8 @@ electric:
   name: Electric
   planned_amount: 150.00
   spent_amount: 120.00
+  expected_date: "2026-02-15"
+  recurring_bill: electric_bill
   rollover: false
 
 christmas_fund:
@@ -28,6 +33,7 @@ christmas_fund:
   name: Christmas Fund
   planned_amount: 100.00
   spent_amount: 0.00
+  expected_date: "2026-02-01"
   rollover: true
   fund_goal: 1200.00
   fund_balance: 800.00
@@ -38,4 +44,5 @@ last_month_groceries:
   name: Groceries
   planned_amount: 600.00
   spent_amount: 580.00
+  expected_date: "2026-01-07"
   rollover: false
