@@ -13,7 +13,7 @@ module Components
         { label: "Recurring Bills", path: :recurring_bills_path, icon: :repeat },
         { label: "Reports", path: :reports_path, icon: :bar_chart_3 },
         { label: "Forecasting", path: :forecasts_path, icon: :line_chart },
-        { label: "Settings", path: :root_path, icon: :settings }
+        { label: "Settings", path: :settings_path, icon: :settings }
       ].freeze
 
       def initialize(current_page: "Dashboard")
