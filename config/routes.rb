@@ -42,6 +42,14 @@ Rails.application.routes.draw do
   # get "manifest" => "rails/pwa#manifest", as: :pwa_manifest
   # get "service-worker" => "rails/pwa#service_worker", as: :pwa_service_worker
 
+  # Action Plan
+  get "action_plan", to: "action_plan#show", as: :action_plan
+  post "action_plan/generate", to: "action_plan#generate", as: :generate_action_plan
+  post "action_plan/items", to: "action_plan#create_item", as: :action_plan_items
+  patch "action_plan/items/:id", to: "action_plan#update_item", as: :action_plan_item
+  post "action_plan/incomes", to: "action_plan#create_income", as: :action_plan_incomes
+  patch "action_plan/incomes/:id", to: "action_plan#update_income", as: :action_plan_income
+
   # Defines the root path route ("/")
   root "pages#dashboard"
 end

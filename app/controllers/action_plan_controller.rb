@@ -1,0 +1,98 @@
+# frozen_string_literal: true
+
+class ActionPlanController < ApplicationController
+  def show
+    @current_page = "Action Plan"
+    months = (params[:months] || 3).to_i.clamp(1, 12)
+
+    # Auto-generate future months
+    ActionPlanGenerator.new(months_ahead: months).generate!
+
+    start_date = Date.current.beginning_of_month
+    end_date = (start_date >> months) - 1.day
+
+    @cash_flow = CashFlowCalculator.new(start_date, end_date).calculate
+    @months = months
+
+    @periods = BudgetPeriod.where(
+      "year > ? OR (year = ? AND month >= ?)",
+      start_date.year - 1, start_date.year, start_date.month
+    ).where(
+      "year < ? OR (year = ? AND month <= ?)",
+      end_date.year + 1, end_date.year, end_date.month
+    ).chronological.includes(budget_items: [:budget_category, :recurring_bill], incomes: [])
+
+    @categories = BudgetCategory.ordered
+
+    render Views::ActionPlan::ShowView.new(
+      cash_flow: @cash_flow,
+      periods: @periods,
+      categories: @categories,
+      months: @months
+    )
+  end
+
+  def generate
+    months = (params[:months] || 3).to_i.clamp(1, 12)
+    ActionPlanGenerator.new(months_ahead: months).generate!
+    redirect_to action_plan_path(months: months), notice: "Action plan regenerated."
+  end
+
+  def create_item
+    @item = BudgetItem.new(item_params)
+    if @item.save
+      redirect_to action_plan_path, notice: "Item added."
+    else
+      redirect_to action_plan_path, alert: @item.errors.full_messages.join(", ")
+    end
+  end
+
+  def update_item
+    @item = BudgetItem.find(params[:id])
+    if @item.update(item_params)
+      respond_to do |format|
+        format.turbo_stream
+        format.html { redirect_to action_plan_path, notice: "Item updated." }
+      end
+    else
+      redirect_to action_plan_path, alert: @item.errors.full_messages.join(", ")
+    end
+  end
+
+  def create_income
+    @income = Income.new(income_params)
+    if @income.save
+      redirect_to action_plan_path, notice: "Income added."
+    else
+      redirect_to action_plan_path, alert: @income.errors.full_messages.join(", ")
+    end
+  end
+
+  def update_income
+    @income = Income.find(params[:id])
+    if @income.update(income_params)
+      respond_to do |format|
+        format.turbo_stream
+        format.html { redirect_to action_plan_path, notice: "Income updated." }
+      end
+    else
+      redirect_to action_plan_path, alert: @income.errors.full_messages.join(", ")
+    end
+  end
+
+  private
+
+  def item_params
+    params.require(:budget_item).permit(
+      :budget_period_id, :budget_category_id, :name,
+      :planned_amount, :expected_date, :rollover, :fund_goal
+    )
+  end
+
+  def income_params
+    params.require(:income).permit(
+      :budget_period_id, :source_name, :expected_amount,
+      :pay_date, :recurring, :frequency
+    )
+  end
+end
