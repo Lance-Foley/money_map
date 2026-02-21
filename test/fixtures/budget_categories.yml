@@ -1,0 +1,65 @@
+giving:
+  name: Giving
+  position: 1
+  icon: heart
+  color: "#ec4899"
+
+savings_category:
+  name: Savings
+  position: 2
+  icon: piggy-bank
+  color: "#10b981"
+
+housing:
+  name: Housing
+  position: 3
+  icon: home
+  color: "#6366f1"
+
+utilities:
+  name: Utilities
+  position: 4
+  icon: zap
+  color: "#f59e0b"
+
+food:
+  name: Food
+  position: 5
+  icon: utensils
+  color: "#ef4444"
+
+transportation:
+  name: Transportation
+  position: 6
+  icon: car
+  color: "#3b82f6"
+
+insurance:
+  name: Insurance
+  position: 7
+  icon: shield
+  color: "#8b5cf6"
+
+health:
+  name: Health
+  position: 8
+  icon: activity
+  color: "#14b8a6"
+
+debt:
+  name: Debt
+  position: 9
+  icon: trending-down
+  color: "#f97316"
+
+personal:
+  name: Personal
+  position: 10
+  icon: user
+  color: "#64748b"
+
+lifestyle:
+  name: Lifestyle
+  position: 11
+  icon: smile
+  color: "#a855f7"

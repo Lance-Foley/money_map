@@ -1,0 +1,51 @@
+chase_checking:
+  name: Chase Checking
+  account_type: 0
+  institution_name: Chase Bank
+  balance: 2500.00
+  active: true
+
+ally_savings:
+  name: Ally Savings
+  account_type: 1
+  institution_name: Ally Bank
+  balance: 15000.00
+  interest_rate: 0.0425
+  active: true
+
+visa_card:
+  name: Visa Credit Card
+  account_type: 2
+  institution_name: Capital One
+  balance: 3200.00
+  interest_rate: 0.1999
+  minimum_payment: 65.00
+  credit_limit: 10000.00
+  active: true
+
+car_loan:
+  name: Car Loan
+  account_type: 3
+  institution_name: Local Credit Union
+  balance: 12000.00
+  interest_rate: 0.0549
+  minimum_payment: 350.00
+  original_balance: 25000.00
+  active: true
+
+home_mortgage:
+  name: Home Mortgage
+  account_type: 4
+  institution_name: Wells Fargo
+  balance: 185000.00
+  interest_rate: 0.0625
+  minimum_payment: 1200.00
+  original_balance: 220000.00
+  active: true
+
+inactive_account:
+  name: Old Savings
+  account_type: 1
+  institution_name: Local Bank
+  balance: 0.00
+  active: false
