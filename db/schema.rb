@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_02_21_200305) do
+ActiveRecord::Schema[8.0].define(version: 2026_02_21_214044) do
   create_table "accounts", force: :cascade do |t|
     t.string "name", null: false
     t.integer "account_type", null: false
@@ -163,6 +163,9 @@ ActiveRecord::Schema[8.0].define(version: 2026_02_21_200305) do
     t.date "next_due_date"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.date "start_date"
+    t.integer "custom_interval_value"
+    t.integer "custom_interval_unit"
     t.index ["account_id"], name: "index_recurring_bills_on_account_id"
     t.index ["budget_category_id"], name: "index_recurring_bills_on_budget_category_id"
   end
