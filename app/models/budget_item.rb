@@ -2,6 +2,7 @@ class BudgetItem < ApplicationRecord
   belongs_to :budget_period
   belongs_to :budget_category
   belongs_to :recurring_bill, optional: true
+  belongs_to :account, optional: true
   has_many :transactions, dependent: :nullify
   has_many :transaction_splits, dependent: :destroy
 

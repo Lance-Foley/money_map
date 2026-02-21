@@ -4,10 +4,12 @@ class Views::ActionPlan::ShowView < Views::Base
   include Phlex::Rails::Helpers::Routes
   include Phlex::Rails::Helpers::FormWith
 
-  def initialize(cash_flow:, periods:, categories:, months:)
+  def initialize(cash_flow:, periods:, timeline_by_month:, categories:, accounts:, months:)
     @cash_flow = cash_flow
     @periods = periods
+    @timeline_by_month = timeline_by_month
     @categories = categories
+    @accounts = accounts
     @months = months
   end
 
@@ -17,7 +19,7 @@ class Views::ActionPlan::ShowView < Views::Base
       div(class: "flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between") do
         div do
           h1(class: "text-2xl font-bold tracking-tight") { "Action Plan" }
-          p(class: "text-muted-foreground") { "Your multi-month cash flow projection and spending plan." }
+          p(class: "text-muted-foreground") { "Your unified cash flow register — every planned money movement in chronological order." }
         end
 
         div(class: "flex items-center gap-2") do
@@ -28,88 +30,9 @@ class Views::ActionPlan::ShowView < Views::Base
         end
       end
 
-      # Summary cards
-      div(class: "grid gap-4 md:grid-cols-4") do
-        summary_card("Starting Balance", format_currency(@cash_flow[:starting_balance]))
-        if @cash_flow[:monthly_summary].any?
-          last_month = @cash_flow[:monthly_summary].last
-          summary_card("Ending Balance", format_currency(last_month[:ending_balance]))
-          total_income = @cash_flow[:monthly_summary].sum { |m| m[:total_income] }
-          total_expenses = @cash_flow[:monthly_summary].sum { |m| m[:total_expenses] }
-          summary_card("Total Income", format_currency(total_income))
-          summary_card("Total Expenses", format_currency(total_expenses))
-        end
-      end
-
-      # Cash flow chart
-      if @cash_flow[:chart_data] && @cash_flow[:chart_data][:labels]&.any?
-        Card do
-          CardHeader do
-            CardTitle { "Cash Flow" }
-            CardDescription { "Running balance over the next #{@months} months." }
-          end
-          CardContent do
-            chart_data = @cash_flow[:chart_data]
-            div(
-              data: {
-                controller: "chart",
-                chart_config_value: {
-                  type: "line",
-                  data: {
-                    labels: chart_data[:labels],
-                    datasets: [{
-                      label: "Running Balance",
-                      data: chart_data[:data],
-                      borderColor: "hsl(var(--primary))",
-                      backgroundColor: "hsl(var(--primary) / 0.1)",
-                      fill: true,
-                      tension: 0.3,
-                      pointRadius: 2
-                    }]
-                  },
-                  options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                      legend: { display: false }
-                    },
-                    scales: {
-                      y: {
-                        ticks: {
-                          callback: "formatCurrency"
-                        }
-                      }
-                    }
-                  }
-                }.to_json
-              },
-              class: "h-[300px]"
-            ) do
-              canvas(id: "cash-flow-chart")
-            end
-          end
-        end
-      end
-
-      # Negative balance warnings
-      if @cash_flow[:negative_dates].any?
-        div(class: "rounded-lg border border-destructive/50 bg-destructive/5 px-4 py-3") do
-          div(class: "flex items-center gap-2") do
-            span(class: "text-destructive font-medium text-sm") { "Warning: Negative balance projected" }
-          end
-          p(class: "text-sm text-destructive/80 mt-1") do
-            dates = @cash_flow[:negative_dates].first(5).map { |d| d.strftime("%b %d") }.join(", ")
-            plain "Your balance may go negative on: #{dates}"
-            if @cash_flow[:negative_dates].size > 5
-              plain " and #{@cash_flow[:negative_dates].size - 5} more dates."
-            end
-          end
-        end
-      end
-
-      # Month sections
+      # Monthly ledger sections
       @periods.each do |period|
-        month_section(period)
+        month_ledger_section(period)
       end
     end
   end
@@ -117,12 +40,13 @@ class Views::ActionPlan::ShowView < Views::Base
   private
 
   def months_selector
-    div(class: "flex items-center gap-1 rounded-md border border-input p-1") do
+    nav(aria: { label: "Month range selector" }, class: "flex items-center gap-1 rounded-md border border-input p-1") do
       [3, 6, 12].each do |m|
         active = m == @months
         a(
           href: helpers.action_plan_path(months: m),
-          class: "inline-flex items-center justify-center rounded-sm px-3 py-1 text-sm font-medium transition-colors #{active ? 'bg-primary text-primary-foreground shadow-sm' : 'hover:bg-accent'}"
+          class: "inline-flex items-center justify-center rounded-sm px-3 py-1 text-sm font-medium transition-colors #{active ? 'bg-primary text-primary-foreground shadow-sm' : 'hover:bg-accent'}",
+          aria: { current: active ? "page" : nil }
         ) do
           plain "#{m}mo"
         end
@@ -130,157 +54,220 @@ class Views::ActionPlan::ShowView < Views::Base
     end
   end
 
-  def month_section(period)
-    incomes = period.incomes.sort_by { |i| i.pay_date || Date.new(period.year, period.month, 1) }
-    items = period.budget_items.sort_by { |i| i.expected_date || Date.new(period.year, period.month, 1) }
+  def month_ledger_section(period)
+    key = [period.year, period.month]
+    events = @timeline_by_month[key] || []
 
-    total_income = incomes.sum(&:expected_amount)
-    total_expenses = items.sum(&:planned_amount)
-    surplus = total_income - total_expenses
+    section(aria: { label: "#{period.display_name} actions" }, class: "space-y-0") do
+      # Month header row
+      div(class: "flex items-center justify-between bg-muted/50 rounded-t-lg px-4 py-3 border border-border") do
+        h2(class: "text-base font-bold") { "#{period.display_name} Actions" }
+        a(
+          href: helpers.budget_path(year: period.year, month: period.month),
+          class: "text-blue-600 dark:text-blue-400 hover:underline text-sm font-medium"
+        ) { "Select Month" }
+      end
 
-    Card do
-      CardHeader do
-        div(class: "flex items-center justify-between") do
-          div do
-            CardTitle { period.display_name }
-            CardDescription do
-              plain "Income: #{format_currency(total_income)} | Expenses: #{format_currency(total_expenses)} | "
-              span(class: surplus >= 0 ? "text-green-600 dark:text-green-400" : "text-destructive") do
-                plain "#{surplus >= 0 ? 'Surplus' : 'Deficit'}: #{format_currency(surplus.abs)}"
+      # Table
+      div(class: "border border-t-0 border-border rounded-b-lg overflow-hidden") do
+        table(class: "w-full", role: "table") do
+          # Table header
+          thead(class: "bg-muted/30") do
+            tr do
+              th(scope: "col", class: "text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-2 w-24") { "Date" }
+              th(scope: "col", class: "text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-2") { "From" }
+              th(scope: "col", class: "text-left text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-2") { "To" }
+              th(scope: "col", class: "text-right text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-2 w-36") { "Amount" }
+              th(scope: "col", class: "text-right text-xs font-medium text-muted-foreground uppercase tracking-wider px-4 py-2 w-36") { "Balance" }
+            end
+          end
+
+          tbody do
+            if events.any?
+              events.each do |event|
+                ledger_row(event)
+              end
+            else
+              tr do
+                td(colspan: "5", class: "text-center text-sm text-muted-foreground py-8 px-4") do
+                  plain "No planned actions for this month."
+                end
               end
             end
           end
-          div(class: "flex items-center gap-2") do
-            Badge(variant: period.status == "active" ? :default : :secondary) { period.status.titleize }
-          end
+        end
+
+        # Add Entry button
+        div(class: "border-t border-border px-4 py-3 bg-muted/10") do
+          add_entry_button(period)
         end
       end
-      CardContent do
-        # Income subsection
-        div(class: "mb-6") do
-          h4(class: "text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3") { "Income" }
-          if incomes.any?
-            div(class: "space-y-2") do
-              incomes.each do |income|
-                income_row(income)
-              end
-            end
-          else
-            p(class: "text-sm text-muted-foreground") { "No income entries." }
-          end
+    end
+  end
 
-          # Add income form
-          div(class: "mt-3 pt-3 border-t") do
-            add_income_form(period)
+  def ledger_row(event)
+    row_bg = event[:is_negative] ? "bg-red-50 dark:bg-red-950" : "hover:bg-accent/30"
+    event_type = event[:event_type]
+
+    tr(class: "border-t border-border transition-colors #{row_bg}") do
+      # Date
+      td(class: "px-4 py-2.5 text-sm text-muted-foreground whitespace-nowrap") do
+        plain event[:date].strftime("%b %d")
+      end
+
+      # From
+      td(class: "px-4 py-2.5") do
+        from_to_pill(event[:from_label])
+      end
+
+      # To (with transfer icon if applicable)
+      td(class: "px-4 py-2.5") do
+        if event_type == :transfer
+          div(class: "flex items-center gap-1.5") do
+            span(class: "text-blue-500 text-xs font-bold", aria: { label: "Transfer" }) { "~" }
+            from_to_pill(event[:to_label])
           end
+        else
+          from_to_pill(event[:to_label])
         end
+      end
 
-        # Expense subsection
-        div do
-          h4(class: "text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3") { "Expenses" }
-          if items.any?
-            div(class: "space-y-2") do
-              items.each do |item|
-                expense_row(item)
-              end
-            end
-          else
-            p(class: "text-sm text-muted-foreground") { "No budget items." }
+      # Amount (color-coded by type)
+      td(class: "px-4 py-2.5 text-right whitespace-nowrap") do
+        amount_display(event)
+      end
+
+      # Running balance
+      td(class: "px-4 py-2.5 text-right whitespace-nowrap") do
+        if event[:is_negative]
+          span(class: "text-sm font-semibold text-destructive") do
+            plain format_currency(event[:running_balance])
           end
-
-          # Add item form
-          div(class: "mt-3 pt-3 border-t") do
-            add_item_form(period)
+          div(class: "text-xs text-destructive font-medium") do
+            plain "Short: #{format_currency(event[:running_balance])}"
+          end
+        else
+          span(class: "text-sm text-muted-foreground") do
+            plain format_currency(event[:running_balance])
           end
         end
       end
     end
   end
 
-  def income_row(income)
-    div(class: "flex items-center justify-between rounded-md px-3 py-2 hover:bg-accent/50 transition-colors") do
-      div(class: "flex items-center gap-3") do
-        span(class: "text-xs text-muted-foreground w-16") { income.pay_date&.strftime("%b %d") || "-" }
-        span(class: "text-sm font-medium") { income.source_name }
-        if income.recurring?
-          Badge(variant: :secondary) { "Recurring" }
-        else
-          Badge(variant: :outline) { "One-off" }
-        end
-      end
+  def from_to_pill(label)
+    span(class: "inline-flex items-center rounded-md border border-border bg-background px-2 py-0.5 text-sm font-medium") do
+      plain label
+    end
+  end
+
+  def amount_display(event)
+    event_type = event[:event_type]
+    amount = event[:amount].abs
+
+    case event_type
+    when :income
       span(class: "text-sm font-semibold text-green-600 dark:text-green-400") do
-        plain "+#{format_currency(income.expected_amount)}"
+        plain "+#{format_currency(amount)}"
+      end
+    when :transfer
+      span(class: "text-sm font-semibold text-blue-600 dark:text-blue-400") do
+        plain "-#{format_currency(amount)}"
+      end
+    when :debt_payoff
+      span(class: "text-sm font-semibold text-orange-600 dark:text-orange-400") do
+        plain "-#{format_currency(amount)}"
+      end
+    else # :expense
+      span(class: "text-sm font-semibold text-foreground") do
+        plain "-#{format_currency(amount)}"
       end
     end
   end
 
-  def expense_row(item)
-    div(class: "flex items-center justify-between rounded-md px-3 py-2 hover:bg-accent/50 transition-colors") do
-      div(class: "flex items-center gap-3") do
-        span(class: "text-xs text-muted-foreground w-16") { item.expected_date&.strftime("%b %d") || "-" }
-        span(class: "text-sm font-medium") { item.name }
-        if item.budget_category
-          Badge(variant: :outline) { item.budget_category.name }
+  def add_entry_button(period)
+    details(class: "group") do
+      summary(class: "inline-flex items-center justify-center rounded-md border border-input bg-background px-3 py-1.5 text-sm font-medium shadow-sm hover:bg-accent cursor-pointer list-none") do
+        plain "+ Add Entry"
+      end
+
+      div(class: "mt-3 space-y-4") do
+        # Expense/Income/Transfer add form
+        add_entry_form(period)
+      end
+    end
+  end
+
+  def add_entry_form(period)
+    # Add budget item form (covers expense, transfer, debt payoff)
+    div(class: "space-y-3") do
+      h4(class: "text-sm font-medium text-muted-foreground") { "Add Expense / Transfer / Debt Payment" }
+      form_with(model: BudgetItem.new, url: helpers.action_plan_items_path, class: "flex flex-wrap gap-2 items-end") do |f|
+        f.hidden_field :budget_period_id, value: period.id
+
+        div(class: "w-36") do
+          label(for: "budget_item_budget_category_id", class: "text-xs font-medium text-muted-foreground") { "Category" }
+          f.select :budget_category_id,
+            @categories.map { |c| [c.name, c.id] },
+            { prompt: "Category" },
+            class: input_class, "aria-label": "Category"
         end
-        if item.from_recurring?
-          Badge(variant: :secondary) { "Recurring" }
-        else
-          Badge(variant: :outline) { "One-off" }
+
+        div(class: "w-36") do
+          label(for: "budget_item_account_id", class: "text-xs font-medium text-muted-foreground") { "From Account" }
+          f.select :account_id,
+            @accounts.map { |a| [a.name, a.id] },
+            { prompt: "Account" },
+            class: input_class, "aria-label": "From account"
         end
+
+        div(class: "flex-1 min-w-[100px]") do
+          label(for: "budget_item_name", class: "text-xs font-medium text-muted-foreground") { "Payee/Name" }
+          f.text_field :name, placeholder: "e.g. Groceries", class: input_class, "aria-label": "Item name"
+        end
+
+        div(class: "w-28") do
+          label(for: "budget_item_planned_amount", class: "text-xs font-medium text-muted-foreground") { "Amount" }
+          f.number_field :planned_amount, step: 0.01, placeholder: "0.00", class: input_class, "aria-label": "Amount"
+        end
+
+        div(class: "w-36") do
+          label(for: "budget_item_expected_date", class: "text-xs font-medium text-muted-foreground") { "Date" }
+          f.date_field :expected_date, class: input_class, "aria-label": "Expected date"
+        end
+
+        f.submit "+ Add", class: "inline-flex items-center justify-center rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground shadow hover:bg-primary/90 cursor-pointer h-9"
       end
-      span(class: "text-sm font-semibold") do
-        plain "-#{format_currency(item.planned_amount)}"
+    end
+
+    # Add income form
+    div(class: "space-y-3 pt-3 border-t border-border") do
+      h4(class: "text-sm font-medium text-muted-foreground") { "Add Income" }
+      form_with(model: Income.new, url: helpers.action_plan_incomes_path, class: "flex flex-wrap gap-2 items-end") do |f|
+        f.hidden_field :budget_period_id, value: period.id
+
+        div(class: "flex-1 min-w-[120px]") do
+          label(for: "income_source_name", class: "text-xs font-medium text-muted-foreground") { "Source" }
+          f.text_field :source_name, placeholder: "e.g. Employer Inc", class: input_class, "aria-label": "Income source"
+        end
+
+        div(class: "w-28") do
+          label(for: "income_expected_amount", class: "text-xs font-medium text-muted-foreground") { "Amount" }
+          f.number_field :expected_amount, step: 0.01, placeholder: "0.00", class: input_class, "aria-label": "Income amount"
+        end
+
+        div(class: "w-36") do
+          label(for: "income_pay_date", class: "text-xs font-medium text-muted-foreground") { "Pay Date" }
+          f.date_field :pay_date, class: input_class, "aria-label": "Pay date"
+        end
+
+        f.submit "+ Add Income", class: "inline-flex items-center justify-center rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground shadow hover:bg-primary/90 cursor-pointer h-9"
       end
     end
   end
 
-  def add_item_form(period)
-    form_with(model: BudgetItem.new, url: helpers.action_plan_items_path, class: "flex flex-wrap gap-2 items-end") do |f|
-      f.hidden_field :budget_period_id, value: period.id
-      div(class: "w-36") do
-        f.select :budget_category_id,
-          @categories.map { |c| [c.name, c.id] },
-          { prompt: "Category" },
-          class: "flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-      end
-      div(class: "flex-1 min-w-[100px]") do
-        f.text_field :name, placeholder: "Item name", class: "flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-      end
-      div(class: "w-28") do
-        f.number_field :planned_amount, step: 0.01, placeholder: "Amount", class: "flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-      end
-      div(class: "w-36") do
-        f.date_field :expected_date, class: "flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-      end
-      f.submit "+ Add Item", class: "inline-flex items-center justify-center rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground shadow hover:bg-primary/90 cursor-pointer h-9"
-    end
-  end
-
-  def add_income_form(period)
-    form_with(model: Income.new, url: helpers.action_plan_incomes_path, class: "flex flex-wrap gap-2 items-end") do |f|
-      f.hidden_field :budget_period_id, value: period.id
-      div(class: "flex-1 min-w-[120px]") do
-        f.text_field :source_name, placeholder: "Source name", class: "flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-      end
-      div(class: "w-28") do
-        f.number_field :expected_amount, step: 0.01, placeholder: "Amount", class: "flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-      end
-      div(class: "w-36") do
-        f.date_field :pay_date, class: "flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-      end
-      f.submit "+ Add Income", class: "inline-flex items-center justify-center rounded-md bg-primary px-3 py-2 text-sm font-medium text-primary-foreground shadow hover:bg-primary/90 cursor-pointer h-9"
-    end
-  end
-
-  def summary_card(title, value)
-    Card do
-      CardHeader(class: "pb-2") do
-        CardTitle(class: "text-sm font-medium") { title }
-      end
-      CardContent do
-        div(class: "text-2xl font-bold") { value }
-      end
-    end
+  def input_class
+    "flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
   end
 
   def format_currency(amount)

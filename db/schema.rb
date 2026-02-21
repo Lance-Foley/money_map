@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_02_21_214520) do
+ActiveRecord::Schema[8.0].define(version: 2026_02_21_223523) do
   create_table "accounts", force: :cascade do |t|
     t.string "name", null: false
     t.integer "account_type", null: false
@@ -77,6 +77,8 @@ ActiveRecord::Schema[8.0].define(version: 2026_02_21_214520) do
     t.date "expected_date"
     t.integer "recurring_bill_id"
     t.boolean "auto_generated", default: false
+    t.integer "account_id"
+    t.index ["account_id"], name: "index_budget_items_on_account_id"
     t.index ["budget_category_id"], name: "index_budget_items_on_budget_category_id"
     t.index ["budget_period_id"], name: "index_budget_items_on_budget_period_id"
     t.index ["expected_date"], name: "index_budget_items_on_expected_date"

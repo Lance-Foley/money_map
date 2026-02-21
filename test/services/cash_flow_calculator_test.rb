@@ -9,9 +9,9 @@ class CashFlowCalculatorTest < ActiveSupport::TestCase
 
   # -- Starting balance --
 
-  test "starting_balance uses current checking and savings account balances" do
+  test "starting_balance uses primary checking account balance only" do
     result = @calculator.calculate
-    expected = Account.active.where(account_type: [:checking, :savings]).sum(:balance).to_f
+    expected = Account.active.where(account_type: :checking).sum(:balance).to_f
     assert_equal expected, result[:starting_balance]
   end
 
@@ -35,7 +35,7 @@ class CashFlowCalculatorTest < ActiveSupport::TestCase
     feb14_events = timeline.select { |e| e[:date] == Date.new(2026, 2, 14) }
     assert feb14_events.length >= 2, "Should have both income and expense on Feb 14"
 
-    types = feb14_events.map { |e| e[:type] }
+    types = feb14_events.map { |e| e[:event_type] }
     income_indices = types.each_index.select { |i| types[i] == :income }
     expense_indices = types.each_index.select { |i| types[i] == :expense }
 
@@ -89,9 +89,8 @@ class CashFlowCalculatorTest < ActiveSupport::TestCase
   end
 
   test "negative_dates contains dates where running balance goes below zero" do
-    # With our fixtures, starting balance is 17500, so no negatives expected
     result = @calculator.calculate
-    negative_events = result[:timeline].select { |e| e[:running_balance] < 0 }
+    negative_events = result[:timeline].select { |e| e[:is_negative] }
     assert_equal negative_events.map { |e| e[:date] }.uniq, result[:negative_dates]
   end
 
@@ -147,29 +146,6 @@ class CashFlowCalculatorTest < ActiveSupport::TestCase
     assert result[:starting_balance].is_a?(Numeric)
   end
 
-  # -- Chart data --
-
-  test "chart_data has matching labels and data arrays" do
-    result = @calculator.calculate
-    assert result[:chart_data].key?(:labels)
-    assert result[:chart_data].key?(:data)
-    assert_equal result[:chart_data][:labels].length, result[:chart_data][:data].length
-  end
-
-  test "chart_data is empty when timeline is empty" do
-    calculator = CashFlowCalculator.new(Date.new(2030, 1, 1), Date.new(2030, 1, 31))
-    result = calculator.calculate
-    assert_equal [], result[:chart_data][:labels]
-    assert_equal [], result[:chart_data][:data]
-  end
-
-  test "chart_data includes starting balance as first point" do
-    result = @calculator.calculate
-    return if result[:timeline].empty?
-
-    assert_equal result[:starting_balance], result[:chart_data][:data].first
-  end
-
   # -- Event record metadata --
 
   test "timeline events include record metadata" do
@@ -181,10 +157,12 @@ class CashFlowCalculatorTest < ActiveSupport::TestCase
       assert event.key?(:name), "Event should have :name"
       assert event.key?(:amount), "Event should have :amount"
       assert event.key?(:type), "Event should have :type"
+      assert event.key?(:event_type), "Event should have :event_type"
       assert event.key?(:source), "Event should have :source"
       assert event.key?(:record_type), "Event should have :record_type"
       assert event.key?(:record_id), "Event should have :record_id"
       assert event.key?(:running_balance), "Event should have :running_balance"
+      assert event.key?(:is_negative), "Event should have :is_negative"
     end
   end
 
@@ -198,5 +176,78 @@ class CashFlowCalculatorTest < ActiveSupport::TestCase
     result = @calculator.calculate
     income_events = result[:timeline].select { |e| e[:type] == :income }
     assert income_events.all? { |e| e[:record_type] == "Income" }
+  end
+
+  # -- Unified ledger fields --
+
+  test "events include from_label and to_label" do
+    result = @calculator.calculate
+    return if result[:timeline].empty?
+
+    result[:timeline].each do |event|
+      assert event.key?(:from_label), "Event should have :from_label"
+      assert event.key?(:to_label), "Event should have :to_label"
+      assert event[:from_label].present?, "from_label should not be blank for #{event[:name]}"
+      assert event[:to_label].present?, "to_label should not be blank for #{event[:name]}"
+    end
+  end
+
+  test "income events have source as from_label and account as to_label" do
+    result = @calculator.calculate
+    income_events = result[:timeline].select { |e| e[:event_type] == :income }
+    assert income_events.any?, "Should have income events"
+
+    income_events.each do |event|
+      assert_equal event[:name], event[:from_label],
+        "Income from_label should be the source name"
+    end
+  end
+
+  test "expense events have account as from_label and item name as to_label" do
+    result = @calculator.calculate
+    expense_events = result[:timeline].select { |e| e[:event_type] == :expense }
+    assert expense_events.any?, "Should have expense events"
+
+    expense_events.each do |event|
+      assert_equal event[:name], event[:to_label],
+        "Expense to_label should be the item name"
+    end
+  end
+
+  test "event_type is set correctly based on category" do
+    result = @calculator.calculate
+    timeline = result[:timeline]
+
+    # All income events should have event_type :income
+    income_events = timeline.select { |e| e[:type] == :income }
+    assert income_events.all? { |e| e[:event_type] == :income }
+
+    # All expense events should have one of the valid event types
+    expense_events = timeline.select { |e| e[:type] == :expense }
+    valid_types = [:expense, :transfer, :debt_payoff]
+    expense_events.each do |event|
+      assert_includes valid_types, event[:event_type],
+        "Event type #{event[:event_type]} not in valid types for #{event[:name]}"
+    end
+  end
+
+  test "is_negative flag is set when balance goes below zero" do
+    result = @calculator.calculate
+    result[:timeline].each do |event|
+      if event[:running_balance] < 0
+        assert event[:is_negative], "is_negative should be true when balance is #{event[:running_balance]}"
+      else
+        assert_not event[:is_negative], "is_negative should be false when balance is #{event[:running_balance]}"
+      end
+    end
+  end
+
+  test "budget_period_id is included in events" do
+    result = @calculator.calculate
+    return if result[:timeline].empty?
+
+    result[:timeline].each do |event|
+      assert event.key?(:budget_period_id), "Event should have :budget_period_id"
+    end
   end
 end

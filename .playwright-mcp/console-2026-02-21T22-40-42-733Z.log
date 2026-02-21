@@ -1,0 +1,3 @@
+[    1646ms] [ERROR] Failed to register controller: ruby-ui--chart (controllers/ruby_ui/chart_controller) TypeError: Failed to resolve module specifier "chart.js/auto". Relative references must start with either "/", "./", or "../". @ http://localhost:3000/assets/stimulus-loading-1fc53fe7.js:25
+[    2750ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3000/_/MwoWUuIu.js:0
+[    2750ms] [ERROR] Failed to register controller: chart (controllers/chart_controller) TypeError: Failed to fetch dynamically imported module: http://localhost:3000/assets/controllers/chart_controller-c75c86f2.js @ http://localhost:3000/assets/stimulus-loading-1fc53fe7.js:25

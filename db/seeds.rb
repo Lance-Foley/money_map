@@ -174,6 +174,7 @@ months.each_with_index do |(year, month), idx|
         item.rollover = name.include?("Fund")
         item.fund_goal = name.include?("Fund") ? planned * 12 : nil
         item.fund_balance = name.include?("Fund") ? planned * idx : nil
+        item.account = checking
       end
     end
   end
