@@ -5,6 +5,7 @@ Rails.application.routes.draw do
   # Resources
   resources :accounts
   resources :transactions do
+    resources :transaction_splits, only: [ :create, :destroy ]
     collection do
       post :bulk_categorize
     end
@@ -16,6 +17,15 @@ Rails.application.routes.draw do
   resources :csv_imports, only: [ :new, :create, :show ]
   resources :debts, only: [ :index, :show ]
   resources :forecasts, only: [ :index, :new, :create, :show, :destroy ]
+
+  # Settings
+  resource :settings, only: [] do
+    get "/", to: "settings#index", on: :collection
+    patch :update_profile, on: :collection
+    post :create_category, on: :collection
+    patch "category/:id", to: "settings#update_category", as: :update_category, on: :collection
+    delete "category/:id", to: "settings#destroy_category", as: :destroy_category, on: :collection
+  end
 
   # Reports
   get "reports", to: "reports#index"
