@@ -1,0 +1,41 @@
+rent:
+  budget_period: current_period
+  budget_category: housing
+  name: Rent
+  planned_amount: 1500.00
+  spent_amount: 1500.00
+  rollover: false
+
+groceries:
+  budget_period: current_period
+  budget_category: food
+  name: Groceries
+  planned_amount: 600.00
+  spent_amount: 450.00
+  rollover: false
+
+electric:
+  budget_period: current_period
+  budget_category: utilities
+  name: Electric
+  planned_amount: 150.00
+  spent_amount: 120.00
+  rollover: false
+
+christmas_fund:
+  budget_period: current_period
+  budget_category: lifestyle
+  name: Christmas Fund
+  planned_amount: 100.00
+  spent_amount: 0.00
+  rollover: true
+  fund_goal: 1200.00
+  fund_balance: 800.00
+
+last_month_groceries:
+  budget_period: last_month
+  budget_category: food
+  name: Groceries
+  planned_amount: 600.00
+  spent_amount: 580.00
+  rollover: false

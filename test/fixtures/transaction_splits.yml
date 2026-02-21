@@ -1,0 +1,9 @@
+groceries_split:
+  transaction_record: uncategorized_purchase
+  budget_item: groceries
+  amount: 25.00
+
+electric_split:
+  transaction_record: uncategorized_purchase
+  budget_item: electric
+  amount: 20.99

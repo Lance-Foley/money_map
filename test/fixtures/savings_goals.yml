@@ -1,0 +1,23 @@
+emergency_fund:
+  name: Emergency Fund
+  target_amount: 15000.00
+  current_amount: 8500.00
+  target_date: "2027-01-01"
+  category: 0
+  priority: 1
+
+vacation_fund:
+  name: Vacation Fund
+  target_amount: 3000.00
+  current_amount: 1200.00
+  target_date: "2026-08-01"
+  category: 1
+  priority: 2
+
+new_laptop:
+  name: New Laptop
+  target_amount: 2000.00
+  current_amount: 2000.00
+  target_date: "2026-06-01"
+  category: 2
+  priority: 3

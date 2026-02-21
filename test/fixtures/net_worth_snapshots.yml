@@ -1,0 +1,13 @@
+january_snapshot:
+  recorded_at: "2026-01-01"
+  total_assets: 17500.00
+  total_liabilities: 200200.00
+  net_worth: -182700.00
+  breakdown: '[{"id":1,"name":"Chase Checking","type":"checking","balance":2500.0},{"id":2,"name":"Ally Savings","type":"savings","balance":15000.0}]'
+
+february_snapshot:
+  recorded_at: "2026-02-01"
+  total_assets: 18000.00
+  total_liabilities: 199800.00
+  net_worth: -181800.00
+  breakdown: '[{"id":1,"name":"Chase Checking","type":"checking","balance":3000.0},{"id":2,"name":"Ally Savings","type":"savings","balance":15000.0}]'

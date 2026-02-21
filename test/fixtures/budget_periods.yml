@@ -1,0 +1,23 @@
+current_period:
+  year: 2026
+  month: 2
+  status: 1
+  total_income: 5000.00
+  total_planned: 4800.00
+  total_spent: 3200.00
+
+last_month:
+  year: 2026
+  month: 1
+  status: 2
+  total_income: 5000.00
+  total_planned: 5000.00
+  total_spent: 4900.00
+
+draft_period:
+  year: 2026
+  month: 3
+  status: 0
+  total_income: 0.00
+  total_planned: 0.00
+  total_spent: 0.00

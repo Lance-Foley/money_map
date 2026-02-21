@@ -1,0 +1,15 @@
+basic_forecast:
+  name: Basic 12-Month Forecast
+  assumptions: '{"monthly_income": 5000.0, "monthly_expenses": 4000.0, "extra_debt_payment": 200.0, "income_growth_rate": 0.03, "expense_growth_rate": 0.02}'
+  projection_months: 12
+
+aggressive_payoff:
+  name: Aggressive Debt Payoff
+  assumptions: '{"monthly_income": 5000.0, "monthly_expenses": 3500.0, "extra_debt_payment": 500.0}'
+  projection_months: 24
+
+with_results:
+  name: Completed Forecast
+  assumptions: '{"monthly_income": 5000.0, "monthly_expenses": 4000.0}'
+  projection_months: 3
+  results: '[{"month":1,"date":"2026-04","income":5000.0,"expenses":4000.0,"surplus":1000.0,"total_debt":10000.0,"savings":20000.0,"net_worth":10000.0},{"month":2,"date":"2026-05","income":5000.0,"expenses":4000.0,"surplus":1000.0,"total_debt":9500.0,"savings":21000.0,"net_worth":11500.0},{"month":3,"date":"2026-06","income":5000.0,"expenses":4000.0,"surplus":1000.0,"total_debt":0.0,"savings":22000.0,"net_worth":22000.0}]'

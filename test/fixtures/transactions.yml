@@ -1,0 +1,47 @@
+grocery_store:
+  account: chase_checking
+  budget_item: groceries
+  date: "2026-02-15"
+  amount: 125.50
+  description: Weekly groceries
+  merchant: Kroger
+  transaction_type: 1
+  imported: false
+
+rent_payment:
+  account: chase_checking
+  budget_item: rent
+  date: "2026-02-01"
+  amount: 1500.00
+  description: February rent
+  merchant: Apartment Complex
+  transaction_type: 1
+  imported: false
+
+paycheck:
+  account: chase_checking
+  date: "2026-02-14"
+  amount: 2500.00
+  description: Biweekly paycheck
+  merchant: Employer Inc
+  transaction_type: 0
+  imported: false
+
+uncategorized_purchase:
+  account: visa_card
+  date: "2026-02-10"
+  amount: 45.99
+  description: Amazon purchase
+  merchant: Amazon
+  transaction_type: 1
+  imported: false
+
+imported_transaction:
+  account: chase_checking
+  budget_item: groceries
+  date: "2026-02-12"
+  amount: 89.23
+  description: Imported grocery purchase
+  merchant: Whole Foods
+  transaction_type: 1
+  imported: true

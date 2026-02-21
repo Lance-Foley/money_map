@@ -1,0 +1,40 @@
+rent_bill:
+  name: Monthly Rent
+  amount: 1500.00
+  account: chase_checking
+  budget_category: housing
+  due_day: 1
+  frequency: 0
+  auto_create_transaction: false
+  reminder_days_before: 3
+  active: true
+  next_due_date: "2026-03-01"
+
+electric_bill:
+  name: Electric Bill
+  amount: 150.00
+  account: chase_checking
+  budget_category: utilities
+  due_day: 15
+  frequency: 0
+  auto_create_transaction: true
+  reminder_days_before: 5
+  active: true
+  next_due_date: "2026-02-15"
+
+insurance_annual:
+  name: Car Insurance
+  amount: 1200.00
+  budget_category: insurance
+  due_day: 10
+  frequency: 2
+  active: true
+  next_due_date: "2026-06-10"
+
+inactive_bill:
+  name: Old Subscription
+  amount: 9.99
+  due_day: 20
+  frequency: 0
+  active: false
+  next_due_date: "2026-01-20"

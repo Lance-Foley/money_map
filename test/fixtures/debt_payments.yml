@@ -1,0 +1,30 @@
+visa_payment:
+  account: visa_card
+  budget_period: current_period
+  amount: 200.00
+  payment_date: "2026-02-15"
+  principal_portion: 147.00
+  interest_portion: 53.00
+
+car_loan_payment:
+  account: car_loan
+  budget_period: current_period
+  amount: 350.00
+  payment_date: "2026-02-01"
+  principal_portion: 295.00
+  interest_portion: 55.00
+
+mortgage_payment:
+  account: home_mortgage
+  budget_period: current_period
+  amount: 1200.00
+  payment_date: "2026-02-01"
+  principal_portion: 237.50
+  interest_portion: 962.50
+
+unlinked_payment:
+  account: visa_card
+  amount: 100.00
+  payment_date: "2026-01-15"
+  principal_portion: 80.00
+  interest_portion: 20.00

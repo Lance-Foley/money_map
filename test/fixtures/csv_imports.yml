@@ -1,0 +1,22 @@
+pending_import:
+  account: chase_checking
+  file_name: chase_feb_2026.csv
+  status: 0
+  records_imported: 0
+  records_skipped: 0
+
+completed_import:
+  account: chase_checking
+  file_name: chase_jan_2026.csv
+  status: 2
+  records_imported: 25
+  records_skipped: 2
+  error_log: "Row 15: Invalid date format\nRow 22: Missing amount"
+
+failed_import:
+  account: visa_card
+  file_name: visa_bad_file.csv
+  status: 3
+  records_imported: 0
+  records_skipped: 0
+  error_log: "File format not recognized"
