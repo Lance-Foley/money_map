@@ -5,14 +5,14 @@ module Components
     class SidebarNav < Components::Base
       NAV_ITEMS = [
         { label: "Dashboard", path: :root_path, icon: :layout_dashboard },
-        { label: "Budget", path: :root_path, icon: :wallet },
-        { label: "Transactions", path: :root_path, icon: :arrow_left_right },
-        { label: "Accounts", path: :root_path, icon: :landmark },
-        { label: "Debt Payoff", path: :root_path, icon: :trending_down },
-        { label: "Savings & Goals", path: :root_path, icon: :piggy_bank },
-        { label: "Recurring Bills", path: :root_path, icon: :repeat },
-        { label: "Reports", path: :root_path, icon: :bar_chart_3 },
-        { label: "Forecasting", path: :root_path, icon: :line_chart },
+        { label: "Budget", path: :budget_path, icon: :wallet },
+        { label: "Transactions", path: :transactions_path, icon: :arrow_left_right },
+        { label: "Accounts", path: :accounts_path, icon: :landmark },
+        { label: "Debt Payoff", path: :debts_path, icon: :trending_down },
+        { label: "Savings & Goals", path: :savings_goals_path, icon: :piggy_bank },
+        { label: "Recurring Bills", path: :recurring_bills_path, icon: :repeat },
+        { label: "Reports", path: :reports_path, icon: :bar_chart_3 },
+        { label: "Forecasting", path: :forecasts_path, icon: :line_chart },
         { label: "Settings", path: :root_path, icon: :settings }
       ].freeze
 
