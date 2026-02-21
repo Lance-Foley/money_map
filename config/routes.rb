@@ -1,7 +1,28 @@
 Rails.application.routes.draw do
   resource :session
   resources :passwords, param: :token
-  # Define your application routes per the DSL in https://guides.rubyonrails.org/routing.html
+
+  # Resources
+  resources :accounts
+  resources :transactions do
+    collection do
+      post :bulk_categorize
+    end
+  end
+  resources :budget_items, only: [ :create, :update, :destroy ]
+  resources :incomes, only: [ :create, :update, :destroy ]
+  resources :savings_goals
+  resources :recurring_bills
+  resources :csv_imports, only: [ :new, :create, :show ]
+  resources :debts, only: [ :index, :show ]
+  resources :forecasts, only: [ :index, :new, :create, :show, :destroy ]
+
+  # Reports
+  get "reports", to: "reports#index"
+
+  # Budget (custom routing by year/month)
+  get "budget(/:year/:month)", to: "budgets#show", as: :budget, defaults: { year: nil, month: nil }
+  post "budget/:year/:month/copy", to: "budgets#copy_previous", as: :copy_budget
 
   # Reveal health status on /up that returns 200 if the app boots with no exceptions, otherwise 500.
   # Can be used by load balancers and uptime monitors to verify that the app is live.
