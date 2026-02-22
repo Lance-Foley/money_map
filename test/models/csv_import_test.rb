@@ -6,10 +6,9 @@ class CsvImportTest < ActiveSupport::TestCase
     assert import.valid?
   end
 
-  test "requires account" do
+  test "account is optional" do
     import = CsvImport.new
-    assert_not import.valid?
-    assert_includes import.errors[:account], "must exist"
+    assert import.valid?
   end
 
   test "status defaults to pending" do
@@ -32,6 +31,7 @@ class CsvImportTest < ActiveSupport::TestCase
     assert_equal "processing", CsvImport.new(status: 1).status
     assert_equal "completed", CsvImport.new(status: 2).status
     assert_equal "failed", CsvImport.new(status: 3).status
+    assert_equal "analyzed", CsvImport.new(status: 4).status
   end
 
   test "process! imports valid CSV data" do

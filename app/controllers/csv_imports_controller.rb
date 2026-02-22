@@ -8,20 +8,28 @@ class CsvImportsController < ApplicationController
 
   def create
     @current_page = "Transactions"
+
     @import = CsvImport.new(
-      account_id: params[:csv_import][:account_id],
       file_name: params[:csv_import][:file]&.original_filename,
-      column_mapping: {
-        "date" => params[:csv_import][:date_column].presence || "Date",
-        "amount" => params[:csv_import][:amount_column].presence || "Amount",
-        "description" => params[:csv_import][:description_column].presence || "Description"
-      }
+      column_mapping: {}
     )
+
+    # Optional account_id for backwards compatibility
+    if params[:csv_import][:account_id].present?
+      @import.account_id = params[:csv_import][:account_id]
+    end
+
     @import.file.attach(params[:csv_import][:file]) if params[:csv_import][:file]
 
+    unless @import.file.attached?
+      @import.errors.add(:file, "must be attached")
+      render Views::CsvImports::NewView.new(accounts: Account.active), status: :unprocessable_entity
+      return
+    end
+
     if @import.save
-      ProcessCsvImportJob.perform_later(@import)
-      redirect_to csv_import_path(@import), notice: "Import queued for processing."
+      @import.analyze!
+      redirect_to preview_csv_import_path(@import)
     else
       render Views::CsvImports::NewView.new(accounts: Account.active), status: :unprocessable_entity
     end
@@ -31,5 +39,49 @@ class CsvImportsController < ApplicationController
     @current_page = "Transactions"
     @import = CsvImport.find(params[:id])
     render Views::CsvImports::ShowView.new(import: @import)
+  end
+
+  def preview
+    @current_page = "Transactions"
+    @import = CsvImport.find(params[:id])
+
+    unless @import.analyzed? || @import.pending?
+      redirect_to csv_import_path(@import), alert: "This import has already been processed."
+      return
+    end
+
+    analysis = @import.parsed_analysis
+    unless analysis
+      redirect_to csv_import_path(@import), alert: "No analysis results found."
+      return
+    end
+
+    render Views::CsvImports::PreviewView.new(
+      import: @import,
+      analysis: analysis,
+      categories: BudgetCategory.ordered
+    )
+  end
+
+  def confirm
+    @current_page = "Transactions"
+    @import = CsvImport.find(params[:id])
+
+    unless @import.analyzed?
+      redirect_to csv_import_path(@import), alert: "This import cannot be confirmed."
+      return
+    end
+
+    analysis = @import.parsed_analysis
+    selections = params[:selections]&.permit!&.to_h || {}
+
+    executor = SmartImportExecutor.new(@import, analysis, selections)
+    result = executor.execute!
+
+    if result[:success]
+      redirect_to csv_import_path(@import), notice: result[:message]
+    else
+      redirect_to preview_csv_import_path(@import), alert: result[:message]
+    end
   end
 end

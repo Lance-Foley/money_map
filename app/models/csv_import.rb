@@ -1,10 +1,30 @@
 class CsvImport < ApplicationRecord
-  belongs_to :account
+  belongs_to :account, optional: true
   has_one_attached :file
 
-  enum :status, { pending: 0, processing: 1, completed: 2, failed: 3 }
+  enum :status, { pending: 0, processing: 1, completed: 2, failed: 3, analyzed: 4 }
 
-  validates :account, presence: true
+  def analyze!
+    content = file.download
+    analyzer = SmartImportAnalyzer.new(
+      content,
+      account_name: nil,
+      institution_name: nil
+    )
+    results = analyzer.analyze
+
+    if results[:error]
+      update!(status: :failed, error_log: results[:error])
+    else
+      update!(
+        status: :analyzed,
+        analysis_results: serialize_analysis(results),
+        column_mapping: results[:detected_columns].transform_keys(&:to_s)
+      )
+    end
+
+    results
+  end
 
   def process!
     update!(status: :processing)
@@ -44,5 +64,30 @@ class CsvImport < ApplicationRecord
     )
   rescue => e
     update!(status: :failed, error_log: e.message)
+  end
+
+  def parsed_analysis
+    return nil unless analysis_results
+    case analysis_results
+    when String then JSON.parse(analysis_results, symbolize_names: true)
+    when Hash then analysis_results.deep_symbolize_keys
+    else nil
+    end
+  end
+
+  private
+
+  def serialize_analysis(results)
+    # Convert Date objects to strings for JSON storage
+    serializable = results.deep_dup
+    serializable[:transactions] = results[:transactions]&.map do |t|
+      t.merge(date: t[:date].to_s)
+    end
+    if serializable.dig(:summary, :date_range)
+      serializable[:summary][:date_range][:start] = serializable[:summary][:date_range][:start].to_s
+      serializable[:summary][:date_range][:end] = serializable[:summary][:date_range][:end].to_s
+    end
+    serializable[:recurring_income]&.each { |r| r[:start_date] = r[:start_date].to_s if r[:start_date] }
+    serializable
   end
 end

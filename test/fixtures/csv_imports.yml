@@ -20,3 +20,11 @@ failed_import:
   records_imported: 0
   records_skipped: 0
   error_log: "File format not recognized"
+
+analyzed_import:
+  account: chase_checking
+  file_name: betterment_smart.csv
+  status: 4
+  records_imported: 0
+  records_skipped: 0
+  analysis_results: '{"detected_columns":{"date":"Settled Date","amount":"Amount","description":"Description","category":"Category"},"account":{"name":"Betterment Checking","type":"checking"},"recurring_income":[{"source_name":"Test Payroll","frequency":"biweekly","amount":1728.30,"start_date":"2026-01-02","category":"Income"}],"recurring_bills":[{"name":"Test Bill","frequency":"monthly","amount":52.00,"due_day":12,"category":"Utilities"}],"recurring_transfers":[],"detected_accounts":[{"name":"Emergency Fund","type":"savings","source":"Internal Transfer"}],"category_mapping":{"Shopping":"Lifestyle"},"budget_suggestions":[{"category":"Lifestyle","monthly_total":200.00,"items":[{"name":"Shopping","amount":200.00}]}],"transactions":[{"date":"2026-01-01","amount":-50.00,"abs_amount":50.00,"description":"Test","csv_category":"Shopping","transaction_type":"expense","mapped_category":"Lifestyle"}],"summary":{"total_transactions":1,"date_range":{"start":"2026-01-01","end":"2026-01-01"},"months_covered":1,"total_income":0,"total_expenses":50.00,"total_transfers":0,"monthly_income_avg":0,"monthly_expense_avg":50.00,"categories_found":1}}'
