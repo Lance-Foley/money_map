@@ -265,7 +265,7 @@ class Views::Pages::DashboardView < Views::Base
         end
       end
       CardFooter(class: "pt-0") do
-        a(href: helpers.recurring_bills_path, class: "text-xs text-primary hover:underline") { "View All Bills" }
+        a(href: helpers.recurring_transactions_path, class: "text-xs text-primary hover:underline") { "View All Bills" }
       end
     end
   end

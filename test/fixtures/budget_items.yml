@@ -5,7 +5,7 @@ rent:
   planned_amount: 1500.00
   spent_amount: 1500.00
   expected_date: "2026-02-01"
-  recurring_bill: rent_bill
+  recurring_transaction: rent_bill
   rollover: false
 
 groceries:
@@ -24,7 +24,7 @@ electric:
   planned_amount: 150.00
   spent_amount: 120.00
   expected_date: "2026-02-15"
-  recurring_bill: electric_bill
+  recurring_transaction: electric_bill
   rollover: false
 
 christmas_fund:

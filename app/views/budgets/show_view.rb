@@ -149,7 +149,7 @@ class Views::Budgets::ShowView < Views::Base
           span(class: "text-sm font-medium truncate") { income.source_name }
           if income.recurring?
             span(class: "inline-flex items-center rounded-full bg-green-100 dark:bg-green-900/40 px-2 py-0.5 text-xs font-medium text-green-700 dark:text-green-400") do
-              plain income.frequency.titleize
+              plain "Recurring"
             end
           end
         end
@@ -177,8 +177,6 @@ class Views::Budgets::ShowView < Views::Base
       end
 
       div(class: "mt-3") do
-        frequency_options = Income.frequencies.keys.map { |freq| [freq.titleize, freq] }
-
         form_with(model: Income.new, url: helpers.incomes_path, class: "space-y-3") do |f|
           f.hidden_field :budget_period_id, value: @period.id
 
@@ -190,10 +188,6 @@ class Views::Budgets::ShowView < Views::Base
             div(class: "w-28") do
               label(for: "income_expected_amount", class: "text-xs font-medium text-muted-foreground") { "Planned" }
               f.number_field :expected_amount, step: 0.01, placeholder: "0.00", class: input_class, required: true
-            end
-            div(class: "w-36") do
-              label(for: "income_frequency", class: "text-xs font-medium text-muted-foreground") { "Frequency" }
-              f.select :frequency, frequency_options, { selected: "monthly" }, class: input_class
             end
             div(class: "w-32") do
               label(for: "income_pay_date", class: "text-xs font-medium text-muted-foreground") { "Pay Date" }

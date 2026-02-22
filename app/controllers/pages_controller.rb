@@ -10,7 +10,7 @@ class PagesController < ApplicationController
       left_to_budget: current_period&.left_to_budget || 0,
       debt_comparison: calculate_debt_comparison,
       monthly_cash_flow: calculate_cash_flow(current_period),
-      upcoming_bills: RecurringBill.active.where("next_due_date >= ? AND next_due_date <= ?", Date.current, Date.current + 7.days).order(:next_due_date),
+      upcoming_bills: RecurringTransaction.active.expenses.where("next_due_date >= ? AND next_due_date <= ?", Date.current, Date.current + 7.days).order(:next_due_date),
       net_worth: calculate_net_worth,
       recent_transactions: Transaction.chronological.limit(5),
       savings_goals: SavingsGoal.active.by_priority.limit(3)

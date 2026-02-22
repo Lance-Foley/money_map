@@ -13,8 +13,13 @@ Rails.application.routes.draw do
   resources :budget_items, only: [ :create, :update, :destroy ]
   resources :incomes, only: [ :create, :update, :destroy ]
   resources :savings_goals
-  resources :recurring_bills
-  resources :csv_imports, only: [ :new, :create, :show ]
+  resources :recurring_transactions
+  resources :csv_imports, only: [ :new, :create, :show ] do
+    member do
+      get :preview
+      post :confirm
+    end
+  end
   resources :debts, only: [ :index, :show ]
   resources :forecasts, only: [ :index, :new, :create, :show, :destroy ]
 

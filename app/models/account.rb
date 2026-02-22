@@ -6,7 +6,7 @@ class Account < ApplicationRecord
 
   has_many :transactions, dependent: :nullify
   has_many :debt_payments, dependent: :destroy
-  has_many :recurring_bills, dependent: :nullify
+  has_many :recurring_transactions, dependent: :nullify
   has_many :csv_imports, dependent: :destroy
 
   validates :name, presence: true

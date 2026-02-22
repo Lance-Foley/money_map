@@ -59,73 +59,6 @@ class IncomeTest < ActiveSupport::TestCase
     assert_not income.received?
   end
 
-  # --- Expanded frequency enum ---
-
-  test "expanded enum values are correct" do
-    assert_equal "weekly", Income.new(frequency: 0).frequency
-    assert_equal "biweekly", Income.new(frequency: 1).frequency
-    assert_equal "semimonthly", Income.new(frequency: 2).frequency
-    assert_equal "monthly", Income.new(frequency: 3).frequency
-    assert_equal "quarterly", Income.new(frequency: 4).frequency
-    assert_equal "semi_annual", Income.new(frequency: 5).frequency
-    assert_equal "annual", Income.new(frequency: 6).frequency
-    assert_equal "custom", Income.new(frequency: 7).frequency
-  end
-
-  # --- Custom frequency validations ---
-
-  test "custom frequency requires interval fields" do
-    income = Income.new(
-      budget_period: budget_periods(:current_period),
-      source_name: "Test",
-      expected_amount: 100,
-      frequency: :custom,
-      recurring: true
-    )
-    assert_not income.valid?
-    assert_includes income.errors[:custom_interval_value], "can't be blank"
-    assert_includes income.errors[:custom_interval_unit], "can't be blank"
-  end
-
-  test "custom frequency with interval fields is valid" do
-    income = Income.new(
-      budget_period: budget_periods(:current_period),
-      source_name: "Test",
-      expected_amount: 100,
-      frequency: :custom,
-      recurring: true,
-      start_date: Date.current,
-      custom_interval_value: 6,
-      custom_interval_unit: 1
-    )
-    assert income.valid?
-  end
-
-  test "custom_interval_value must be greater than 0" do
-    income = Income.new(
-      budget_period: budget_periods(:current_period),
-      source_name: "Test",
-      expected_amount: 100,
-      frequency: :custom,
-      recurring: true,
-      start_date: Date.current,
-      custom_interval_value: 0,
-      custom_interval_unit: 1
-    )
-    assert_not income.valid?
-    assert_includes income.errors[:custom_interval_value], "must be greater than 0"
-  end
-
-  test "non-custom frequency does not require interval fields" do
-    income = Income.new(
-      budget_period: budget_periods(:current_period),
-      source_name: "Test",
-      expected_amount: 100,
-      frequency: :monthly
-    )
-    assert income.valid?
-  end
-
   # --- recurring_sources scope ---
 
   test "recurring_sources scope returns non-generated recurring income" do
@@ -145,5 +78,19 @@ class IncomeTest < ActiveSupport::TestCase
       expected_amount: 500.00
     )
     assert_not income.recurring?
+  end
+
+  # --- recurring_transaction association ---
+
+  test "belongs to recurring_transaction optionally" do
+    income = incomes(:main_paycheck)
+    assert_not_nil income.recurring_transaction
+    assert_equal recurring_transactions(:recurring_paycheck), income.recurring_transaction
+  end
+
+  test "income without recurring_transaction is valid" do
+    income = incomes(:freelance_income)
+    assert_nil income.recurring_transaction
+    assert income.valid?
   end
 end

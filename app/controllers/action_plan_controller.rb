@@ -20,7 +20,7 @@ class ActionPlanController < ApplicationController
     ).where(
       "year < ? OR (year = ? AND month <= ?)",
       end_date.year + 1, end_date.year, end_date.month
-    ).chronological.includes(budget_items: [:budget_category, :recurring_bill, :account], incomes: [])
+    ).chronological.includes(budget_items: [:budget_category, :recurring_transaction, :account], incomes: [])
 
     # Group timeline events by month for the unified ledger view
     timeline_by_month = @cash_flow[:timeline].group_by { |e| [e[:date].year, e[:date].month] }
@@ -106,7 +106,7 @@ class ActionPlanController < ApplicationController
   def income_params
     params.require(:income).permit(
       :budget_period_id, :source_name, :expected_amount,
-      :pay_date, :recurring, :frequency
+      :pay_date, :recurring
     )
   end
 end

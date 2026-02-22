@@ -6,7 +6,7 @@ class ActionPlanGenerator
 
   def generate!
     periods = ensure_periods_exist
-    generate_bill_items(periods)
+    generate_expense_items(periods)
     generate_income_entries(periods)
     recalculate_totals(periods)
   end
@@ -20,22 +20,22 @@ class ActionPlanGenerator
     end
   end
 
-  def generate_bill_items(periods)
-    RecurringBill.active.includes(:budget_category).find_each do |bill|
+  def generate_expense_items(periods)
+    RecurringTransaction.active.expenses.includes(:budget_category).find_each do |txn|
       periods.each do |period|
-        next if period.budget_items.exists?(recurring_bill: bill)
+        next if period.budget_items.exists?(recurring_transaction: txn)
 
         range_start = Date.new(period.year, period.month, 1)
         range_end = range_start.end_of_month
 
-        dates = bill.occurrences_in_range(range_start, range_end)
+        dates = txn.occurrences_in_range(range_start, range_end)
         dates.each do |occurrence_date|
-          category = bill.budget_category || BudgetCategory.find_by(name: "Personal")
+          category = txn.budget_category || BudgetCategory.find_by(name: "Personal")
           period.budget_items.create!(
-            name: bill.name,
-            planned_amount: bill.amount,
+            name: txn.name,
+            planned_amount: txn.amount,
             expected_date: occurrence_date,
-            recurring_bill: bill,
+            recurring_transaction: txn,
             budget_category: category,
             auto_generated: true
           )
@@ -45,25 +45,23 @@ class ActionPlanGenerator
   end
 
   def generate_income_entries(periods)
-    Income.recurring_sources.find_each do |source|
+    RecurringTransaction.active.incomes_only.find_each do |txn|
       periods.each do |period|
-        next if period.incomes.exists?(recurring_source_id: source.id)
-        next unless source.start_date.present?
+        next if period.incomes.exists?(recurring_transaction_id: txn.id)
+        next unless txn.start_date.present?
 
         range_start = Date.new(period.year, period.month, 1)
         range_end = range_start.end_of_month
 
-        dates = source.occurrences_in_range(range_start, range_end)
+        dates = txn.occurrences_in_range(range_start, range_end)
         dates.each do |occurrence_date|
           period.incomes.create!(
-            source_name: source.source_name,
-            expected_amount: source.expected_amount,
+            source_name: txn.name,
+            expected_amount: txn.amount,
             pay_date: occurrence_date,
-            start_date: source.start_date,
-            frequency: source.frequency,
             recurring: true,
             auto_generated: true,
-            recurring_source_id: source.id
+            recurring_transaction_id: txn.id
           )
         end
       end

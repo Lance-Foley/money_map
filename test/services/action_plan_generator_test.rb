@@ -24,21 +24,21 @@ class ActionPlanGeneratorTest < ActiveSupport::TestCase
     assert BudgetPeriod.find_by(year: 2026, month: 5), "May period should be created"
   end
 
-  test "creates budget items from recurring bills with correct attributes" do
+  test "creates budget items from recurring expense transactions with correct attributes" do
     @generator.generate!
 
     march = budget_periods(:draft_period)
-    rent_items = march.budget_items.where(recurring_bill: recurring_bills(:rent_bill))
+    rent_items = march.budget_items.where(recurring_transaction: recurring_transactions(:rent_bill))
 
     assert_equal 1, rent_items.count, "Should create exactly one rent item for March"
 
     rent_item = rent_items.first
     assert_equal "Monthly Rent", rent_item.name
-    assert_equal recurring_bills(:rent_bill).amount, rent_item.planned_amount
+    assert_equal recurring_transactions(:rent_bill).amount, rent_item.planned_amount
     assert rent_item.auto_generated?, "Item should be marked as auto-generated"
   end
 
-  test "creates income entries from recurring income" do
+  test "creates income entries from recurring income transactions" do
     @generator.generate!
 
     march = budget_periods(:draft_period)
@@ -46,13 +46,14 @@ class ActionPlanGeneratorTest < ActiveSupport::TestCase
 
     assert auto_incomes.any?, "Should create auto-generated income entries for March"
 
-    # The main_paycheck is biweekly starting 2026-01-02, so it should have occurrences in March
-    main_source_incomes = auto_incomes.where(recurring_source_id: incomes(:main_paycheck).id)
-    assert main_source_incomes.any?, "Should create income entries from main paycheck source"
+    # The recurring_paycheck is biweekly starting 2026-01-02, so it should have occurrences in March
+    paycheck_txn = recurring_transactions(:recurring_paycheck)
+    paycheck_incomes = auto_incomes.where(recurring_transaction_id: paycheck_txn.id)
+    assert paycheck_incomes.any?, "Should create income entries from recurring paycheck transaction"
 
-    income_entry = main_source_incomes.first
+    income_entry = paycheck_incomes.first
     assert_equal "Employer Inc", income_entry.source_name
-    assert_equal incomes(:main_paycheck).expected_amount, income_entry.expected_amount
+    assert_equal paycheck_txn.amount, income_entry.expected_amount
     assert income_entry.recurring?, "Auto-generated income should be marked as recurring"
     assert income_entry.auto_generated?, "Income should be marked as auto-generated"
   end
@@ -73,7 +74,7 @@ class ActionPlanGeneratorTest < ActiveSupport::TestCase
     @generator.generate!
 
     march = budget_periods(:draft_period)
-    item = march.budget_items.where(recurring_bill: recurring_bills(:rent_bill)).first
+    item = march.budget_items.where(recurring_transaction: recurring_transactions(:rent_bill)).first
     item.update!(planned_amount: 1600.00)
 
     @generator.generate!
@@ -83,11 +84,11 @@ class ActionPlanGeneratorTest < ActiveSupport::TestCase
       "User-edited amount should be preserved after regeneration"
   end
 
-  test "sets expected_date from recurring bill schedule" do
+  test "sets expected_date from recurring transaction schedule" do
     @generator.generate!
 
     march = budget_periods(:draft_period)
-    rent_item = march.budget_items.where(recurring_bill: recurring_bills(:rent_bill)).first
+    rent_item = march.budget_items.where(recurring_transaction: recurring_transactions(:rent_bill)).first
 
     assert_not_nil rent_item.expected_date, "Expected date should be set"
     assert_equal 3, rent_item.expected_date.month, "Expected date should be in March"
@@ -97,80 +98,81 @@ class ActionPlanGeneratorTest < ActiveSupport::TestCase
     assert_equal Date.new(2026, 3, 1), rent_item.expected_date
   end
 
-  test "sets budget_category from recurring bill" do
+  test "sets budget_category from recurring transaction" do
     @generator.generate!
 
     march = budget_periods(:draft_period)
-    rent_item = march.budget_items.where(recurring_bill: recurring_bills(:rent_bill)).first
+    rent_item = march.budget_items.where(recurring_transaction: recurring_transactions(:rent_bill)).first
 
     assert_equal budget_categories(:housing), rent_item.budget_category,
-      "Budget category should be set from the recurring bill's category"
+      "Budget category should be set from the recurring transaction's category"
 
-    electric_item = march.budget_items.where(recurring_bill: recurring_bills(:electric_bill)).first
+    electric_item = march.budget_items.where(recurring_transaction: recurring_transactions(:electric_bill)).first
     assert_equal budget_categories(:utilities), electric_item.budget_category,
       "Electric bill should use utilities category"
   end
 
-  test "skips inactive recurring bills" do
+  test "skips inactive recurring transactions" do
     @generator.generate!
 
     march = budget_periods(:draft_period)
-    inactive_items = march.budget_items.where(recurring_bill: recurring_bills(:inactive_bill))
+    inactive_items = march.budget_items.where(recurring_transaction: recurring_transactions(:inactive_bill))
 
-    assert_equal 0, inactive_items.count, "Should not create items for inactive bills"
+    assert_equal 0, inactive_items.count, "Should not create items for inactive transactions"
   end
 
-  test "handles bills with no budget_category by falling back to Personal" do
-    # Create a bill without a budget_category
-    no_category_bill = RecurringBill.create!(
+  test "handles transactions with no budget_category by falling back to Personal" do
+    # Create a transaction without a budget_category
+    no_category_txn = RecurringTransaction.create!(
       name: "No Category Bill",
       amount: 25.00,
       due_day: 5,
       frequency: :monthly,
       start_date: Date.new(2026, 1, 5),
+      direction: :expense,
       active: true
     )
 
     @generator.generate!
 
     march = budget_periods(:draft_period)
-    items = march.budget_items.where(recurring_bill: no_category_bill)
+    items = march.budget_items.where(recurring_transaction: no_category_txn)
 
-    assert_equal 1, items.count, "Should create item for bill without category"
+    assert_equal 1, items.count, "Should create item for transaction without category"
     assert_equal budget_categories(:personal), items.first.budget_category,
-      "Should fall back to Personal category when bill has no category"
+      "Should fall back to Personal category when transaction has no category"
   ensure
-    no_category_bill&.destroy
+    no_category_txn&.destroy
   end
 
-  test "annual bill only appears in month with occurrence" do
+  test "annual transaction only appears in month with occurrence" do
     @generator.generate!
 
     # insurance_annual: start_date 2025-06-10, annual frequency
     # Next occurrence after 2025-06-10 is 2026-06-10
-    # So March, April, May should NOT have this bill
+    # So March, April, May should NOT have this transaction
     march = budget_periods(:draft_period)
-    insurance_items = march.budget_items.where(recurring_bill: recurring_bills(:insurance_annual))
-    assert_equal 0, insurance_items.count, "Annual bill should not appear in March"
+    insurance_items = march.budget_items.where(recurring_transaction: recurring_transactions(:insurance_annual))
+    assert_equal 0, insurance_items.count, "Annual transaction should not appear in March"
 
     april = BudgetPeriod.find_by(year: 2026, month: 4)
-    insurance_items_apr = april.budget_items.where(recurring_bill: recurring_bills(:insurance_annual))
-    assert_equal 0, insurance_items_apr.count, "Annual bill should not appear in April"
+    insurance_items_apr = april.budget_items.where(recurring_transaction: recurring_transactions(:insurance_annual))
+    assert_equal 0, insurance_items_apr.count, "Annual transaction should not appear in April"
 
     may = BudgetPeriod.find_by(year: 2026, month: 5)
-    insurance_items_may = may.budget_items.where(recurring_bill: recurring_bills(:insurance_annual))
-    assert_equal 0, insurance_items_may.count, "Annual bill should not appear in May"
+    insurance_items_may = may.budget_items.where(recurring_transaction: recurring_transactions(:insurance_annual))
+    assert_equal 0, insurance_items_may.count, "Annual transaction should not appear in May"
   end
 
   test "generates items across all future months" do
     @generator.generate!
 
-    # Rent bill is monthly, should appear in March, April, and May
+    # Rent is monthly, should appear in March, April, and May
     [3, 4, 5].each do |month|
       period = BudgetPeriod.find_by(year: 2026, month: month)
       assert_not_nil period, "Period for month #{month} should exist"
 
-      rent_items = period.budget_items.where(recurring_bill: recurring_bills(:rent_bill))
+      rent_items = period.budget_items.where(recurring_transaction: recurring_transactions(:rent_bill))
       assert_equal 1, rent_items.count,
         "Should have exactly one rent item in month #{month}"
     end

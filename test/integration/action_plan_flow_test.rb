@@ -51,7 +51,7 @@ class ActionPlanFlowTest < ActionDispatch::IntegrationTest
 
     future_periods.each do |period|
       generated_item = period.budget_items.where(
-        recurring_bill: recurring_bills(:rent_bill),
+        recurring_transaction: recurring_transactions(:rent_bill),
         auto_generated: true
       ).first
       if generated_item
@@ -75,7 +75,7 @@ class ActionPlanFlowTest < ActionDispatch::IntegrationTest
     other_periods = future_periods.where.not(id: target_period.id)
     other_periods.each do |period|
       other_item = period.budget_items.where(
-        recurring_bill: recurring_bills(:rent_bill),
+        recurring_transaction: recurring_transactions(:rent_bill),
         auto_generated: true
       ).first
       next unless other_item
@@ -133,26 +133,26 @@ class ActionPlanFlowTest < ActionDispatch::IntegrationTest
     assert_equal 2000.00, income.expected_amount.to_f
   end
 
-  test "generator creates items from recurring bills with different frequencies" do
+  test "generator creates items from recurring transactions with different frequencies" do
     ActionPlanGenerator.new(months_ahead: 3).generate!
 
     # Monthly rent should appear in every future month
     future_periods = BudgetPeriod.where("year > 2026 OR (year = 2026 AND month > 2)").chronological
     future_periods.each do |period|
-      rent_items = period.budget_items.where(recurring_bill: recurring_bills(:rent_bill))
+      rent_items = period.budget_items.where(recurring_transaction: recurring_transactions(:rent_bill))
       assert rent_items.any?,
-        "Rent bill should generate an item for #{period.display_name}"
+        "Rent transaction should generate an item for #{period.display_name}"
     end
   end
 
-  test "generator skips inactive recurring bills" do
+  test "generator skips inactive recurring transactions" do
     ActionPlanGenerator.new(months_ahead: 3).generate!
 
     future_periods = BudgetPeriod.where("year > 2026 OR (year = 2026 AND month > 2)").chronological
     future_periods.each do |period|
-      inactive_items = period.budget_items.where(recurring_bill: recurring_bills(:inactive_bill))
+      inactive_items = period.budget_items.where(recurring_transaction: recurring_transactions(:inactive_bill))
       assert_equal 0, inactive_items.count,
-        "Inactive bill should not generate items for #{period.display_name}"
+        "Inactive transaction should not generate items for #{period.display_name}"
     end
   end
 
@@ -163,14 +163,14 @@ class ActionPlanFlowTest < ActionDispatch::IntegrationTest
     skip("No future period found") unless future_period
 
     rent_item = future_period.budget_items.where(
-      recurring_bill: recurring_bills(:rent_bill),
+      recurring_transaction: recurring_transactions(:rent_bill),
       auto_generated: true
     ).first
     skip("No auto-generated rent item found") unless rent_item
 
     assert_not_nil rent_item.expected_date
     assert_equal future_period.month, rent_item.expected_date.month
-    assert_equal recurring_bills(:rent_bill).budget_category, rent_item.budget_category
-    assert_equal recurring_bills(:rent_bill).amount.to_f, rent_item.planned_amount.to_f
+    assert_equal recurring_transactions(:rent_bill).budget_category, rent_item.budget_category
+    assert_equal recurring_transactions(:rent_bill).amount.to_f, rent_item.planned_amount.to_f
   end
 end

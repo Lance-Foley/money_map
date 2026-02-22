@@ -1,14 +1,17 @@
-class RecurringBill < ApplicationRecord
+class RecurringTransaction < ApplicationRecord
   include Schedulable
 
   belongs_to :account, optional: true
   belongs_to :budget_category, optional: true
   has_many :budget_items, dependent: :nullify
+  has_many :incomes, dependent: :nullify
 
   enum :frequency, {
     weekly: 0, biweekly: 1, semimonthly: 2, monthly: 3,
     quarterly: 4, semi_annual: 5, annual: 6, custom: 7
   }
+
+  enum :direction, { income: 0, expense: 1, transfer: 2 }
 
   validates :name, presence: true
   validates :amount, presence: true, numericality: { greater_than: 0 }
@@ -18,6 +21,9 @@ class RecurringBill < ApplicationRecord
   validates :custom_interval_unit, presence: true, if: :custom?
 
   scope :active, -> { where(active: true) }
+  scope :expenses, -> { where(direction: :expense) }
+  scope :incomes_only, -> { where(direction: :income) }
+  scope :transfers, -> { where(direction: :transfer) }
   scope :due_soon, ->(days = 7) {
     today = Date.current
     active.where("next_due_date <= ?", today + days.days).where("next_due_date >= ?", today)

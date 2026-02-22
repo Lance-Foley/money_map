@@ -4,10 +4,9 @@ main_paycheck:
   expected_amount: 2500.00
   received_amount: 2500.00
   pay_date: "2026-02-14"
-  start_date: "2026-01-02"
   recurring: true
-  frequency: 1
   auto_generated: false
+  recurring_transaction: recurring_paycheck
 
 second_paycheck:
   budget_period: current_period
@@ -15,10 +14,9 @@ second_paycheck:
   expected_amount: 2500.00
   received_amount: 2500.00
   pay_date: "2026-02-28"
-  start_date: "2026-01-16"
   recurring: true
-  frequency: 1
   auto_generated: false
+  recurring_transaction: recurring_paycheck
 
 freelance_income:
   budget_period: current_period
@@ -26,7 +24,6 @@ freelance_income:
   expected_amount: 500.00
   pay_date: "2026-02-20"
   recurring: false
-  frequency: 3
   auto_generated: false
 
 last_month_paycheck:
@@ -35,7 +32,6 @@ last_month_paycheck:
   expected_amount: 2500.00
   received_amount: 2500.00
   pay_date: "2026-01-14"
-  start_date: "2026-01-02"
   recurring: true
-  frequency: 1
   auto_generated: false
+  recurring_transaction: recurring_paycheck

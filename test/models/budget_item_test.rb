@@ -100,7 +100,7 @@ class BudgetItemTest < ActiveSupport::TestCase
     end
   end
 
-  test "from_recurring? returns true when linked to recurring bill" do
+  test "from_recurring? returns true when linked to recurring transaction" do
     assert budget_items(:rent).from_recurring?
   end
 
@@ -114,9 +114,9 @@ class BudgetItemTest < ActiveSupport::TestCase
     assert_equal dates.sort, dates
   end
 
-  test "for_recurring_bill scope finds items from a specific bill" do
-    items = BudgetItem.for_recurring_bill(recurring_bills(:rent_bill))
+  test "for_recurring_transaction scope finds items from a specific transaction" do
+    items = BudgetItem.for_recurring_transaction(recurring_transactions(:rent_bill))
     assert items.any?, "Expected at least one item for rent_bill"
-    assert items.all? { |i| i.recurring_bill_id == recurring_bills(:rent_bill).id }
+    assert items.all? { |i| i.recurring_transaction_id == recurring_transactions(:rent_bill).id }
   end
 end

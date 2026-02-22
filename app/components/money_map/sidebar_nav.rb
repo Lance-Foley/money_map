@@ -11,7 +11,7 @@ module Components
         { label: "Accounts", path: :accounts_path, icon: :landmark },
         { label: "Debt Payoff", path: :debts_path, icon: :trending_down },
         { label: "Savings & Goals", path: :savings_goals_path, icon: :piggy_bank },
-        { label: "Recurring Bills", path: :recurring_bills_path, icon: :repeat },
+        { label: "Recurring", path: :recurring_transactions_path, icon: :repeat },
         { label: "Reports", path: :reports_path, icon: :bar_chart_3 },
         { label: "Forecasting", path: :forecasts_path, icon: :line_chart },
         { label: "Settings", path: :settings_path, icon: :settings }

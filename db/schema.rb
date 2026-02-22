@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.0].define(version: 2026_02_21_223523) do
+ActiveRecord::Schema[8.0].define(version: 2026_02_22_002031) do
   create_table "accounts", force: :cascade do |t|
     t.string "name", null: false
     t.integer "account_type", null: false
@@ -75,14 +75,14 @@ ActiveRecord::Schema[8.0].define(version: 2026_02_21_223523) do
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
     t.date "expected_date"
-    t.integer "recurring_bill_id"
+    t.integer "recurring_transaction_id"
     t.boolean "auto_generated", default: false
     t.integer "account_id"
     t.index ["account_id"], name: "index_budget_items_on_account_id"
     t.index ["budget_category_id"], name: "index_budget_items_on_budget_category_id"
     t.index ["budget_period_id"], name: "index_budget_items_on_budget_period_id"
     t.index ["expected_date"], name: "index_budget_items_on_expected_date"
-    t.index ["recurring_bill_id"], name: "index_budget_items_on_recurring_bill_id"
+    t.index ["recurring_transaction_id"], name: "index_budget_items_on_recurring_transaction_id"
   end
 
   create_table "budget_periods", force: :cascade do |t|
@@ -98,7 +98,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_02_21_223523) do
   end
 
   create_table "csv_imports", force: :cascade do |t|
-    t.integer "account_id", null: false
+    t.integer "account_id"
     t.string "file_name"
     t.integer "status", default: 0
     t.json "column_mapping"
@@ -107,6 +107,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_02_21_223523) do
     t.text "error_log"
     t.datetime "created_at", null: false
     t.datetime "updated_at", null: false
+    t.json "analysis_results"
     t.index ["account_id"], name: "index_csv_imports_on_account_id"
   end
 
@@ -147,7 +148,9 @@ ActiveRecord::Schema[8.0].define(version: 2026_02_21_223523) do
     t.integer "custom_interval_unit"
     t.boolean "auto_generated"
     t.integer "recurring_source_id"
+    t.integer "recurring_transaction_id"
     t.index ["budget_period_id"], name: "index_incomes_on_budget_period_id"
+    t.index ["recurring_transaction_id"], name: "index_incomes_on_recurring_transaction_id"
   end
 
   create_table "net_worth_snapshots", force: :cascade do |t|
@@ -161,7 +164,7 @@ ActiveRecord::Schema[8.0].define(version: 2026_02_21_223523) do
     t.index ["recorded_at"], name: "index_net_worth_snapshots_on_recorded_at", unique: true
   end
 
-  create_table "recurring_bills", force: :cascade do |t|
+  create_table "recurring_transactions", force: :cascade do |t|
     t.string "name", null: false
     t.decimal "amount", precision: 12, scale: 2, null: false
     t.integer "account_id"
@@ -178,8 +181,9 @@ ActiveRecord::Schema[8.0].define(version: 2026_02_21_223523) do
     t.date "start_date"
     t.integer "custom_interval_value"
     t.integer "custom_interval_unit"
-    t.index ["account_id"], name: "index_recurring_bills_on_account_id"
-    t.index ["budget_category_id"], name: "index_recurring_bills_on_budget_category_id"
+    t.integer "direction", default: 1, null: false
+    t.index ["account_id"], name: "index_recurring_transactions_on_account_id"
+    t.index ["budget_category_id"], name: "index_recurring_transactions_on_budget_category_id"
   end
 
   create_table "savings_goals", force: :cascade do |t|
@@ -242,13 +246,13 @@ ActiveRecord::Schema[8.0].define(version: 2026_02_21_223523) do
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
   add_foreign_key "budget_items", "budget_categories"
   add_foreign_key "budget_items", "budget_periods"
-  add_foreign_key "budget_items", "recurring_bills"
+  add_foreign_key "budget_items", "recurring_transactions"
   add_foreign_key "csv_imports", "accounts"
   add_foreign_key "debt_payments", "accounts"
   add_foreign_key "debt_payments", "budget_periods"
   add_foreign_key "incomes", "budget_periods"
-  add_foreign_key "recurring_bills", "accounts"
-  add_foreign_key "recurring_bills", "budget_categories"
+  add_foreign_key "recurring_transactions", "accounts"
+  add_foreign_key "recurring_transactions", "budget_categories"
   add_foreign_key "sessions", "users"
   add_foreign_key "transaction_splits", "budget_items"
   add_foreign_key "transaction_splits", "transactions", column: "transaction_record_id"
