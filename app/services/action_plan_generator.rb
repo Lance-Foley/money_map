@@ -1,17 +1,25 @@
 class ActionPlanGenerator
   def initialize(months_ahead: 3, from_date: Date.current)
     @months_ahead = months_ahead
-    @from_date = from_date.beginning_of_month.next_month
+    @from_date = from_date.beginning_of_month
   end
 
   def generate!
     periods = ensure_periods_exist
+    clear_auto_generated(periods)
     generate_expense_items(periods)
     generate_income_entries(periods)
     recalculate_totals(periods)
   end
 
   private
+
+  def clear_auto_generated(periods)
+    periods.each do |period|
+      period.budget_items.where(auto_generated: true).delete_all
+      period.incomes.where(auto_generated: true).delete_all
+    end
+  end
 
   def ensure_periods_exist
     (0...@months_ahead).map do |offset|
@@ -23,8 +31,6 @@ class ActionPlanGenerator
   def generate_expense_items(periods)
     RecurringTransaction.active.expenses.includes(:budget_category).find_each do |txn|
       periods.each do |period|
-        next if period.budget_items.exists?(recurring_transaction: txn)
-
         range_start = Date.new(period.year, period.month, 1)
         range_end = range_start.end_of_month
 
@@ -47,7 +53,6 @@ class ActionPlanGenerator
   def generate_income_entries(periods)
     RecurringTransaction.active.incomes_only.find_each do |txn|
       periods.each do |period|
-        next if period.incomes.exists?(recurring_transaction_id: txn.id)
         next unless txn.start_date.present?
 
         range_start = Date.new(period.year, period.month, 1)

@@ -5,23 +5,24 @@ class ActionPlanGeneratorTest < ActiveSupport::TestCase
     # Clean up any future periods beyond the fixture-defined ones
     # to ensure fresh state for each test
     BudgetPeriod.where("year = 2026 AND month >= 4").destroy_all
-    # Also clean any auto-generated items in the March draft period
+    # Also clean any auto-generated items in fixture periods
+    budget_periods(:current_period).budget_items.where(auto_generated: true).destroy_all
+    budget_periods(:current_period).incomes.where(auto_generated: true).destroy_all
     budget_periods(:draft_period).budget_items.where(auto_generated: true).destroy_all
     budget_periods(:draft_period).incomes.where(auto_generated: true).destroy_all
 
     @generator = ActionPlanGenerator.new(months_ahead: 3, from_date: Date.new(2026, 2, 21))
   end
 
-  test "creates budget periods for future months" do
-    # March already exists as draft_period fixture; April and May should be created
+  test "creates budget periods for current and future months" do
+    # February and March already exist as fixtures; April should be created
     assert_nil BudgetPeriod.find_by(year: 2026, month: 4)
-    assert_nil BudgetPeriod.find_by(year: 2026, month: 5)
 
     @generator.generate!
 
+    assert BudgetPeriod.find_by(year: 2026, month: 2), "February period should exist"
     assert BudgetPeriod.find_by(year: 2026, month: 3), "March period should exist"
     assert BudgetPeriod.find_by(year: 2026, month: 4), "April period should be created"
-    assert BudgetPeriod.find_by(year: 2026, month: 5), "May period should be created"
   end
 
   test "creates budget items from recurring expense transactions with correct attributes" do
@@ -70,18 +71,25 @@ class ActionPlanGeneratorTest < ActiveSupport::TestCase
     assert_equal income_count_before, Income.count, "Should not create duplicate income entries"
   end
 
-  test "does not overwrite edited items" do
+  test "regeneration replaces auto-generated items with fresh values" do
     @generator.generate!
 
     march = budget_periods(:draft_period)
-    item = march.budget_items.where(recurring_transaction: recurring_transactions(:rent_bill)).first
-    item.update!(planned_amount: 1600.00)
+    rent_txn = recurring_transactions(:rent_bill)
+    item = march.budget_items.where(recurring_transaction: rent_txn).first
+    original_amount = rent_txn.amount
+
+    # Simulate updating the recurring transaction amount
+    rent_txn.update!(amount: 1600.00)
 
     @generator.generate!
 
-    item.reload
-    assert_equal 1600.00, item.planned_amount.to_f,
-      "User-edited amount should be preserved after regeneration"
+    # The old item should be replaced with a new one reflecting the updated amount
+    new_item = march.budget_items.where(recurring_transaction: rent_txn).first
+    assert_equal 1600.00, new_item.planned_amount.to_f,
+      "Regeneration should pick up the updated recurring transaction amount"
+  ensure
+    rent_txn&.update!(amount: original_amount)
   end
 
   test "sets expected_date from recurring transaction schedule" do
@@ -150,7 +158,11 @@ class ActionPlanGeneratorTest < ActiveSupport::TestCase
 
     # insurance_annual: start_date 2025-06-10, annual frequency
     # Next occurrence after 2025-06-10 is 2026-06-10
-    # So March, April, May should NOT have this transaction
+    # So February, March, April should NOT have this transaction
+    february = budget_periods(:current_period)
+    insurance_items_feb = february.budget_items.where(recurring_transaction: recurring_transactions(:insurance_annual))
+    assert_equal 0, insurance_items_feb.count, "Annual transaction should not appear in February"
+
     march = budget_periods(:draft_period)
     insurance_items = march.budget_items.where(recurring_transaction: recurring_transactions(:insurance_annual))
     assert_equal 0, insurance_items.count, "Annual transaction should not appear in March"
@@ -158,23 +170,19 @@ class ActionPlanGeneratorTest < ActiveSupport::TestCase
     april = BudgetPeriod.find_by(year: 2026, month: 4)
     insurance_items_apr = april.budget_items.where(recurring_transaction: recurring_transactions(:insurance_annual))
     assert_equal 0, insurance_items_apr.count, "Annual transaction should not appear in April"
-
-    may = BudgetPeriod.find_by(year: 2026, month: 5)
-    insurance_items_may = may.budget_items.where(recurring_transaction: recurring_transactions(:insurance_annual))
-    assert_equal 0, insurance_items_may.count, "Annual transaction should not appear in May"
   end
 
-  test "generates items across all future months" do
+  test "generates items across all covered months" do
     @generator.generate!
 
-    # Rent is monthly, should appear in March, April, and May
-    [3, 4, 5].each do |month|
+    # Rent is monthly, should appear in February, March, and April
+    [2, 3, 4].each do |month|
       period = BudgetPeriod.find_by(year: 2026, month: month)
       assert_not_nil period, "Period for month #{month} should exist"
 
-      rent_items = period.budget_items.where(recurring_transaction: recurring_transactions(:rent_bill))
+      rent_items = period.budget_items.where(recurring_transaction: recurring_transactions(:rent_bill), auto_generated: true)
       assert_equal 1, rent_items.count,
-        "Should have exactly one rent item in month #{month}"
+        "Should have exactly one auto-generated rent item in month #{month}"
     end
   end
 

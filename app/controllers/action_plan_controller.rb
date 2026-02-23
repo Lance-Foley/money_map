@@ -8,18 +8,19 @@ class ActionPlanController < ApplicationController
     # Auto-generate future months
     ActionPlanGenerator.new(months_ahead: months).generate!
 
-    start_date = Date.current.beginning_of_month
-    end_date = (start_date >> months) - 1.day
+    period_start = Date.current.beginning_of_month
+    cash_flow_start = Date.current
+    end_date = (period_start >> months) - 1.day
 
-    @cash_flow = CashFlowCalculator.new(start_date, end_date).calculate
+    @cash_flow = CashFlowCalculator.new(cash_flow_start, end_date).calculate
     @months = months
 
     @periods = BudgetPeriod.where(
       "year > ? OR (year = ? AND month >= ?)",
-      start_date.year - 1, start_date.year, start_date.month
+      period_start.year, period_start.year, period_start.month
     ).where(
       "year < ? OR (year = ? AND month <= ?)",
-      end_date.year + 1, end_date.year, end_date.month
+      end_date.year, end_date.year, end_date.month
     ).chronological.includes(budget_items: [:budget_category, :recurring_transaction, :account], incomes: [])
 
     # Group timeline events by month for the unified ledger view

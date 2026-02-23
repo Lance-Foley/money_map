@@ -41,15 +41,15 @@ class ActionPlanFlowTest < ActionDispatch::IntegrationTest
   end
 
   test "edit generated item amount for one month only" do
-    # Generate future months starting from next month
+    # Generate months starting from current month
     ActionPlanGenerator.new(months_ahead: 3).generate!
 
-    # Find a generated rent item for a future month
-    future_periods = BudgetPeriod.where("year > 2026 OR (year = 2026 AND month > 2)").chronological
+    # Find a generated rent item
+    generated_periods = BudgetPeriod.where("year > 2026 OR (year = 2026 AND month >= 2)").chronological
     generated_item = nil
     target_period = nil
 
-    future_periods.each do |period|
+    generated_periods.each do |period|
       generated_item = period.budget_items.where(
         recurring_transaction: recurring_transactions(:rent_bill),
         auto_generated: true
@@ -60,7 +60,7 @@ class ActionPlanFlowTest < ActionDispatch::IntegrationTest
       end
     end
 
-    skip("No auto-generated rent items found in future months") unless generated_item
+    skip("No auto-generated rent items found") unless generated_item
 
     original_amount = generated_item.planned_amount
 
@@ -72,7 +72,7 @@ class ActionPlanFlowTest < ActionDispatch::IntegrationTest
     assert_equal 1700.00, generated_item.planned_amount.to_f
 
     # Other months' generated items should still have the original amount
-    other_periods = future_periods.where.not(id: target_period.id)
+    other_periods = generated_periods.where.not(id: target_period.id)
     other_periods.each do |period|
       other_item = period.budget_items.where(
         recurring_transaction: recurring_transactions(:rent_bill),
@@ -84,28 +84,33 @@ class ActionPlanFlowTest < ActionDispatch::IntegrationTest
     end
   end
 
-  test "regenerate does not overwrite edited items" do
+  test "regenerate refreshes auto-generated items from recurring transactions" do
     ActionPlanGenerator.new(months_ahead: 3).generate!
 
-    future_periods = BudgetPeriod.where("year > 2026 OR (year = 2026 AND month > 2)").chronological
+    generated_periods = BudgetPeriod.where("year > 2026 OR (year = 2026 AND month >= 2)").chronological
     item = nil
-    future_periods.each do |period|
+    generated_periods.each do |period|
       item = period.budget_items.where(auto_generated: true).first
       break if item
     end
 
     skip("No auto-generated items found") unless item
 
-    # Edit the item's amount
-    item.update!(planned_amount: 1700.00)
+    original_recurring_txn = item.recurring_transaction
+    original_amount = original_recurring_txn.amount
 
-    # Regenerate should not overwrite
+    # Regeneration should replace auto-generated items with fresh values
     post generate_action_plan_url
     assert_redirected_to action_plan_url(months: 3)
 
-    item.reload
-    assert_equal 1700.00, item.planned_amount.to_f,
-      "Regeneration should not overwrite user-edited amounts"
+    # The auto-generated item should reflect the recurring transaction's current amount
+    refreshed_item = item.budget_period.budget_items.where(
+      recurring_transaction: original_recurring_txn,
+      auto_generated: true
+    ).first
+    assert_not_nil refreshed_item, "Auto-generated item should be recreated"
+    assert_equal original_amount.to_f, refreshed_item.planned_amount.to_f,
+      "Regenerated item should reflect the recurring transaction amount"
   end
 
   test "action plan shows cash flow data" do
@@ -137,7 +142,7 @@ class ActionPlanFlowTest < ActionDispatch::IntegrationTest
     ActionPlanGenerator.new(months_ahead: 3).generate!
 
     # Monthly rent should appear in every future month
-    future_periods = BudgetPeriod.where("year > 2026 OR (year = 2026 AND month > 2)").chronological
+    future_periods = BudgetPeriod.where("year > 2026 OR (year = 2026 AND month >= 2)").chronological
     future_periods.each do |period|
       rent_items = period.budget_items.where(recurring_transaction: recurring_transactions(:rent_bill))
       assert rent_items.any?,
@@ -148,7 +153,7 @@ class ActionPlanFlowTest < ActionDispatch::IntegrationTest
   test "generator skips inactive recurring transactions" do
     ActionPlanGenerator.new(months_ahead: 3).generate!
 
-    future_periods = BudgetPeriod.where("year > 2026 OR (year = 2026 AND month > 2)").chronological
+    future_periods = BudgetPeriod.where("year > 2026 OR (year = 2026 AND month >= 2)").chronological
     future_periods.each do |period|
       inactive_items = period.budget_items.where(recurring_transaction: recurring_transactions(:inactive_bill))
       assert_equal 0, inactive_items.count,
@@ -159,7 +164,7 @@ class ActionPlanFlowTest < ActionDispatch::IntegrationTest
   test "generated items have correct expected_date and category" do
     ActionPlanGenerator.new(months_ahead: 3).generate!
 
-    future_period = BudgetPeriod.where("year > 2026 OR (year = 2026 AND month > 2)").chronological.first
+    future_period = BudgetPeriod.where("year > 2026 OR (year = 2026 AND month >= 2)").chronological.first
     skip("No future period found") unless future_period
 
     rent_item = future_period.budget_items.where(
